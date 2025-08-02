@@ -1,0 +1,21 @@
+{
+  "name": "Absensi Budi Bakti Utama",
+  "short_name": "Absensi BBU",
+  "description": "Aplikasi Absensi Online untuk SMP & SMK Budi Bakti Utama.",
+  "icons": [
+    {
+      "src": "/android-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea"
+}
