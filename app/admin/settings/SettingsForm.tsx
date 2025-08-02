@@ -1,4 +1,4 @@
-// app/admin/settings/SettingsForm.tsx
+// Lokasi File: app/admin/settings/SettingsForm.tsx
 'use client';
 
 import { updateSettings } from "./actions";
@@ -7,8 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 
-// Komponen ini menerima data awal sebagai 'prop'
-export default function SettingsForm({ initialData }: { initialData: any }) {
+// PERBAIKAN: Membuat interface untuk mendefinisikan bentuk data pengaturan.
+// Ini menggantikan tipe 'any' dan membuat kode lebih aman.
+interface SchoolCoordinates {
+  lat: number | string;
+  lng: number | string;
+}
+
+interface SettingsData {
+  smp?: SchoolCoordinates;
+  smk?: SchoolCoordinates;
+}
+
+// PERBAIKAN: Menggunakan interface 'SettingsData' sebagai tipe untuk prop.
+export default function SettingsForm({ initialData }: { initialData: SettingsData }) {
 
   // Fungsi ini akan dipanggil saat form disubmit
   const handleUpdateSettings = async (formData: FormData) => {

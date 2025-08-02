@@ -1,7 +1,19 @@
-// app/admin/settings/page.tsx
+// Lokasi File: app/admin/settings/page.tsx
+
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import SettingsForm from "./SettingsForm"; // Kita akan buat komponen form terpisah
+import SettingsForm from "./SettingsForm";
+
+// PERBAIKAN 1: Membuat interface untuk mendefinisikan bentuk data yang diharapkan dari database.
+interface SchoolCoordinate {
+  lat: number;
+  lng: number;
+}
+
+interface SchoolSettings {
+  smp?: SchoolCoordinate;
+  smk?: SchoolCoordinate;
+}
 
 export default async function SettingsPage() {
   // Ambil data pengaturan koordinat sekolah dari database
@@ -15,8 +27,9 @@ export default async function SettingsPage() {
     return <p className="text-red-500">Gagal memuat pengaturan: {coordsError.message}</p>
   }
 
-  // Parsing data JSON dari database
-  const initialCoordinates = schoolCoordsData.setting_value as any;
+  // PERBAIKAN 2: Mengganti 'any' dengan tipe 'SchoolSettings' yang lebih spesifik.
+  // Menambahkan '|| {}' sebagai fallback jika data dari DB kosong, untuk mencegah error.
+  const initialCoordinates = (schoolCoordsData?.setting_value || {}) as SchoolSettings;
 
   return (
     <div className="space-y-6">

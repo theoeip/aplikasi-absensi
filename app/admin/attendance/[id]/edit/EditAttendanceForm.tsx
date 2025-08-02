@@ -1,4 +1,4 @@
-// app/admin/attendance/[id]/edit/EditAttendanceForm.tsx
+// Lokasi File: app/admin/attendance/[id]/edit/EditAttendanceForm.tsx
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,15 @@ import { toast } from 'sonner';
 import { updateAttendanceStatus } from "../../actions";
 import { useState } from "react";
 
-export default function EditAttendanceForm({ attendanceData }: { attendanceData: any }) {
+// PERBAIKAN: Membuat interface untuk mendefinisikan struktur data.
+// Ini menggantikan tipe 'any' dan membuat kode lebih aman dan jelas.
+interface AttendanceData {
+  id: string;
+  status: string;
+}
+
+// PERBAIKAN: Menggunakan interface 'AttendanceData' sebagai tipe untuk prop.
+export default function EditAttendanceForm({ attendanceData }: { attendanceData: AttendanceData }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleUpdate = async (formData: FormData) => {

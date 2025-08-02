@@ -9,20 +9,31 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { cookies } from "next/headers"; // <-- PERBAIKAN 1: Impor cookies
+import { cookies } from "next/headers";
 
 const formatDate = (dateString: string) => new Date(dateString).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+
+// Interface untuk mendefinisikan bentuk data yang diharapkan
+interface AttendanceRecord {
+  id: string;
+  check_in_time: string;
+  status: string;
+  users: {
+    full_name: string;
+    school: string;
+  } | null;
+}
 
 export default async function AttendanceReportPage({
   searchParams,
 }: {
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const cookieStore = cookies(); // <-- PERBAIKAN 2: Dapatkan cookie store
-  const supabase = createClient(cookieStore); // <-- PERBAIKAN 3: Berikan ke createClient
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
   
   const { data: { session } } = await supabase.auth.getSession();
-  const adminRole = session?.user?.user_metadata?.role;
+  const adminRole: string | undefined = session?.user?.user_metadata?.role;
 
   const startDate = searchParams?.start as string;
   const endDate = searchParams?.end as string;
@@ -84,10 +95,10 @@ export default async function AttendanceReportPage({
                     </TableHeader>
                     <TableBody>
                         {attendanceData && attendanceData.length > 0 ? (
-                        attendanceData.map((absen: any) => (
+                        attendanceData.map((absen: AttendanceRecord) => (
                             <TableRow key={absen.id}>
-                                <TableCell className="font-medium">{absen.users.full_name}</TableCell>
-                                <TableCell>{absen.users.school}</TableCell>
+                                <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
+                                <TableCell>{absen.users?.school}</TableCell>
                                 <TableCell>{formatDate(absen.check_in_time)}</TableCell>
                                 <TableCell>
                                     <Badge variant={

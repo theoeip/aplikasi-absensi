@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// Lokasi File: app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -7,21 +7,27 @@ import { createClient } from '@/utils/supabase/client';
 import { calculateDistance } from '@/utils/helpers';
 import AttendanceCalendar from './AttendanceCalendar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+// PERBAIKAN 1: Menghapus 'CardHeader', 'CardTitle', 'CardDescription' yang tidak terpakai.
+import { Card, CardContent } from '@/components/ui/card'; 
 import { toast } from 'sonner';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// PERBAIKAN 2: Mengimpor 'IconDefinition' untuk memberikan tipe yang benar pada ikon.
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { faGraduationCap, faSignOutAlt, faMapMarkerAlt, faExclamationTriangle, faSignInAlt } from '@fortawesome/free-solid-svg-icons';
 
+// --- Interface yang Diperlukan ---
 interface UserProfile {
   full_name: string | null;
   role: string | null;
   school: string | null;
 }
 
-interface Coordinates {
-  lat: number;
-  lng: number;
+// PERBAIKAN 3: Membuat interface untuk data koordinat sekolah agar tidak menggunakan 'any'.
+interface SchoolCoordinates {
+  [key: string]: { lat: number, lng: number };
 }
+
+// PERBAIKAN 4: Menghapus interface 'Coordinates' yang tidak terpakai.
+
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -30,7 +36,8 @@ export default function DashboardPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWithinRadius, setIsWithinRadius] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [locationMessage, setLocationMessage] = useState<{text: string; color: string; icon: any}>({
+  // PERBAIKAN 5: Mengganti tipe 'any' dengan 'IconDefinition' yang sudah diimpor.
+  const [locationMessage, setLocationMessage] = useState<{text: string; color: string; icon: IconDefinition}>({
     text: 'Mendeteksi lokasi...', color: 'text-gray-500', icon: faMapMarkerAlt
   });
   const [clock, setClock] = useState(new Date());
@@ -46,7 +53,8 @@ export default function DashboardPage() {
     const { data: settings } = await supabase.from('settings').select('setting_value').eq('setting_key', 'school_coordinates').single();
     if (!settings || !userProfile.school) return;
 
-    const schoolCoordsData = settings.setting_value as any;
+    // PERBAIKAN 6: Mengganti 'as any' dengan tipe 'SchoolCoordinates' yang lebih spesifik.
+    const schoolCoordsData = settings.setting_value as SchoolCoordinates;
     const userSchoolKey = userProfile.school.toLowerCase().includes('smp') ? 'smp' : 'smk';
     const schoolCoords = schoolCoordsData[userSchoolKey];
 
@@ -125,6 +133,7 @@ export default function DashboardPage() {
   };
 
   return (
+    // ... sisa kode JSX Anda tetap sama ...
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
