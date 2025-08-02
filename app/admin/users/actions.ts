@@ -1,55 +1,78 @@
-// app/admin/users/actions.ts
+// Lokasi File: app/admin/users/actions.ts
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation'; // <-- Pastikan ini ada
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers'; // <-- PERBAIKAN 1: Impor cookies
 
 export async function addUser(formData: FormData) {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  const adminRole = session?.user?.user_metadata?.role;
+  // Log untuk debugging, akan muncul di Edge Function Log
+  console.log("--- Add User Action Triggered ---");
+  console.log("Is service key present in env?", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  if (!adminRole) {
-    return { success: false, message: 'Akses ditolak.' };
-  }
+  // PERBAIKAN 2: Gunakan cookies saat memanggil createClient
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
 
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-    full_name: formData.get('full_name') as string,
-    role: formData.get('role') as string,
-    school: formData.get('school') as string,
-  };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const adminRole = session?.user?.user_metadata?.role;
 
-  if (adminRole === 'AdminSMP' && data.school !== 'SMP BUDI BAKTI UTAMA') {
-    return { success: false, message: 'Admin SMP hanya bisa menambah pengguna untuk SMP.' };
-  }
-  if (adminRole === 'AdminSMK' && data.school !== 'SMK BUDI BAKTI UTAMA') {
-    return { success: false, message: 'Admin SMK hanya bisa menambah pengguna untuk SMK.' };
-  }
-  if ((adminRole === 'AdminSMP' || adminRole === 'AdminSMK') && (data.role.includes('Admin'))) {
-      return { success: false, message: 'Admin sekolah tidak dapat membuat pengguna admin lain.' };
-  }
+    if (!adminRole) {
+      console.error("Add User Failed: Admin role not found in session.");
+      return { success: false, message: 'Akses ditolak: Peran admin tidak ditemukan.' };
+    }
 
-  const { error } = await supabaseAdmin.auth.admin.createUser({
-    email: data.email,
-    password: data.password,
-    email_confirm: true,
-    user_metadata: {
-      full_name: data.full_name,
-      role: data.role,
-      school: data.school,
-    },
-  });
+    const data = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+      full_name: formData.get('full_name') as string,
+      role: formData.get('role') as string,
+      school: formData.get('school') as string,
+    };
 
-  if (error) {
-    return { success: false, message: error.message };
+    // Validasi input dasar
+    if (!data.email || !data.password || !data.full_name || !data.role || !data.school) {
+        return { success: false, message: 'Semua kolom wajib diisi.' };
+    }
+
+    if (adminRole === 'AdminSMP' && data.school !== 'SMP BUDI BAKTI UTAMA') {
+      return { success: false, message: 'Admin SMP hanya bisa menambah pengguna untuk SMP.' };
+    }
+    if (adminRole === 'AdminSMK' && data.school !== 'SMK BUDI BAKTI UTAMA') {
+      return { success: false, message: 'Admin SMK hanya bisa menambah pengguna untuk SMK.' };
+    }
+    if ((adminRole === 'AdminSMP' || adminRole === 'AdminSMK') && (data.role.includes('Admin'))) {
+        return { success: false, message: 'Admin sekolah tidak dapat membuat pengguna admin lain.' };
+    }
+
+    console.log("Creating user with email:", data.email);
+    const { data: newUserData, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: data.full_name,
+        role: data.role,
+        school: data.school,
+      },
+    });
+
+    if (error) {
+      console.error("Supabase Admin createUser Error:", error.message);
+      return { success: false, message: error.message };
+    }
+
+    console.log("User created successfully. Revalidating path...");
+    revalidatePath('/admin/users');
+    return { success: true, message: `Pengguna ${data.full_name} berhasil dibuat.` };
+
+  } catch (e) {
+    console.error("FATAL ERROR in addUser action:", e);
+    return { success: false, message: 'Terjadi kesalahan tak terduga di server.' };
   }
-  
-  revalidatePath('/admin/users');
-  return { success: true, message: `Pengguna ${data.full_name} berhasil dibuat.` };
 }
 
 export async function deleteUser(formData: FormData) {
@@ -65,7 +88,6 @@ export async function deleteUser(formData: FormData) {
   return { success: true, message: 'Pengguna berhasil dihapus.' };
 }
 
-// --- FUNGSI UPDATE YANG HILANG ---
 export async function updateUser(formData: FormData) {
   const userId = formData.get('userId') as string;
   
@@ -94,6 +116,6 @@ export async function updateUser(formData: FormData) {
   }
 
   revalidatePath('/admin/users');
-  revalidatePath(`/admin/users/${userId}/edit`); // Juga revalidasi halaman edit
+  revalidatePath(`/admin/users/${userId}/edit`);
   redirect('/admin/users');
 }
