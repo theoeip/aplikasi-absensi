@@ -4,18 +4,22 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import EditAttendanceForm from "./EditAttendanceForm";
 
-// PERBAIKAN: Menambahkan interface untuk mendefinisikan bentuk data yang diharapkan dari database.
-// Ini membuat kode lebih jelas dan mencegah eror tipe.
+// PERBAIKAN: Mendefinisikan tipe untuk props dengan cara yang lebih standar.
+type PageProps = {
+  params: { id: string };
+};
+
 interface AttendanceWithUser {
   id: string;
   check_in_time: string;
   status: string;
   users: {
     full_name: string;
-  } | null; // Dibuat nullable untuk penanganan yang lebih aman.
+  } | null;
 }
 
-export default async function EditAttendancePage({ params }: { params: { id: string } }) {
+// PERBAIKAN: Menggunakan 'PageProps' yang sudah didefinisikan.
+export default async function EditAttendancePage({ params }: PageProps) {
   const attendanceId = params.id;
 
   const { data: attendance, error } = await supabaseAdmin
@@ -24,7 +28,6 @@ export default async function EditAttendancePage({ params }: { params: { id: str
     .eq('id', attendanceId)
     .single();
 
-  // Kita bisa 'cast' tipe data untuk membantu TypeScript
   const typedAttendance = attendance as AttendanceWithUser | null;
 
   if (error || !typedAttendance) {
@@ -36,8 +39,6 @@ export default async function EditAttendancePage({ params }: { params: { id: str
     );
   }
   
-  // PERBAIKAN: Menambahkan pengecekan untuk memastikan data 'users' tidak null.
-  // Meskipun menggunakan inner join, ini adalah praktik yang sangat baik untuk keamanan.
   if (!typedAttendance.users) {
      return (
       <div className="space-y-6">
@@ -58,7 +59,6 @@ export default async function EditAttendancePage({ params }: { params: { id: str
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Tidak perlu ada perubahan di sini, karena 'typedAttendance' memiliki semua properti yang dibutuhkan oleh EditAttendanceForm */}
           <EditAttendanceForm attendanceData={typedAttendance} />
         </CardContent>
       </Card>
