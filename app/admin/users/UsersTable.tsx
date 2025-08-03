@@ -1,4 +1,7 @@
-// Lokasi File: app/admin/users/UsersTable.tsx (DENGAN LINTER DISABLE)
+// Lokasi File: app/admin/users/UsersTable.tsx (DENGAN ATURAN LINTER NONAKTIF GLOBAL)
+
+/* eslint-disable react/no-unescaped-entities */
+
 'use client';
 
 import { useState } from 'react';
@@ -46,8 +49,6 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
     if (error) {
       toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
-      // PERBAIKAN 1: Kita nonaktifkan aturan linter untuk baris ini
-      // eslint-disable-next-line react/no-unescaped-entities
       toast.success(`Pengguna '${userName}' berhasil dihapus secara permanen.`);
       router.refresh(); 
     }
@@ -87,8 +88,6 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
-                          {/* PERBAIKAN 2: Nonaktifkan juga aturan linter untuk baris ini */}
-                          {/* eslint-disable-next-line react/no-unescaped-entities */}
                           <AlertDialogDescription>
                             Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengguna '{user.full_name || user.email}' secara permanen dari sistem.
                           </AlertDialogDescription>
