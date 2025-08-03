@@ -1,4 +1,4 @@
-// Lokasi File: app/admin/users/UsersTable.tsx (SUDAH DIPERBAIKI)
+// Lokasi File: app/admin/users/UsersTable.tsx (DENGAN PERBAIKAN LINTING)
 'use client';
 
 import { useState } from 'react';
@@ -36,13 +36,9 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ====================================================================
-  // === PERBAIKAN UTAMA ADA DI FUNGSI INI ===
-  // ====================================================================
   const handleDelete = async (userId: string, userName: string) => {
     setIsDeleting(true);
 
-    // Panggil Edge Function 'delete-user' untuk menghapus pengguna dari auth.users
     const { error } = await supabase.functions.invoke('delete-user', {
       body: { user_id: userId },
     });
@@ -50,8 +46,8 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
     if (error) {
       toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
-      toast.success(`Pengguna "${userName}" berhasil dihapus secara permanen.`);
-      // Refresh halaman untuk memperbarui daftar pengguna
+      // PERBAIKAN 1: Ganti " dengan '
+      toast.success(`Pengguna '${userName}' berhasil dihapus secara permanen.`);
       router.refresh(); 
     }
     
@@ -90,14 +86,14 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                          {/* PERBAIKAN 2: Ganti " dengan ' */}
                           <AlertDialogDescription>
                             Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengguna 
-                            "{user.full_name || user.email}" secara permanen dari sistem.
+                            '{user.full_name || user.email}' secara permanen dari sistem.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
-                          {/* Memanggil fungsi handleDelete dengan parameter yang benar */}
                           <AlertDialogAction 
                             onClick={() => handleDelete(user.id, user.full_name || user.email)}
                             disabled={isDeleting}
