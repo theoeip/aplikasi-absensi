@@ -1,4 +1,5 @@
 // app/dashboard/AttendanceCalendar.tsx
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,27 +8,24 @@ import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
-import id from 'date-fns/locale/id'; // Import locale Bahasa Indonesia
+import id from 'date-fns/locale/id';
 import { createClient } from '@/utils/supabase/client';
 
-// Import CSS wajib untuk react-big-calendar
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// Konfigurasi localizer untuk menggunakan date-fns dengan locale Indonesia
 const locales = {
   'id': id,
 };
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }), // Minggu dimulai hari Senin
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   getDay,
   locales,
 });
 
-// Definisikan tipe untuk data absensi kita
 interface AttendanceEvent extends Event {
-  status: string; // 'Hadir', 'Izin', 'Sakit', 'Alpha'
+  status: string;
 }
 
 export default function AttendanceCalendar() {
@@ -36,27 +34,32 @@ export default function AttendanceCalendar() {
 
   useEffect(() => {
     const fetchAttendance = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // PERBAIKAN: Gunakan getSession() untuk mendapatkan sesi yang aktif
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Jika tidak ada sesi (pengguna tidak login), hentikan eksekusi
+      if (!session) {
+        console.log("Tidak ada sesi, data absensi tidak diambil.");
+        return;
+      }
 
       // Ambil data absensi untuk user yang sedang login
       const { data, error } = await supabase
         .from('absensi')
         .select('check_in_time, status')
-        .eq('user_id', user.id);
+        .eq('user_id', session.user.id); // Gunakan ID dari sesi
 
       if (error) {
         console.error('Error fetching attendance:', error);
         return;
       }
 
-      // Ubah data dari Supabase menjadi format yang dimengerti kalender
       const formattedEvents = data.map(att => {
         const checkInDate = new Date(att.check_in_time);
         return {
-          title: att.status, // Judul event adalah statusnya
+          title: att.status,
           start: checkInDate,
-          end: checkInDate, // Untuk event satu hari, start dan end sama
+          end: checkInDate,
           allDay: true,
           status: att.status,
         };
@@ -68,12 +71,11 @@ export default function AttendanceCalendar() {
     fetchAttendance();
   }, [supabase]);
 
-  // Fungsi untuk memberi warna pada event berdasarkan status
   const eventStyleGetter = (event: AttendanceEvent) => {
-    let backgroundColor = '#808080'; // Default (Alpha)
-    if (event.status === 'Hadir') backgroundColor = '#22c55e'; // Hijau
-    if (event.status === 'Izin') backgroundColor = '#3b82f6';  // Biru
-    if (event.status === 'Sakit') backgroundColor = '#f59e0b'; // Kuning
+    let backgroundColor = '#808080';
+    if (event.status === 'Hadir') backgroundColor = '#22c55e';
+    if (event.status === 'Izin') backgroundColor = '#3b82f6';
+    if (event.status === 'Sakit') backgroundColor = '#f59e0b';
 
     const style = {
       backgroundColor,
@@ -99,7 +101,7 @@ export default function AttendanceCalendar() {
           endAccessor="end"
           style={{ height: 500 }}
           eventPropGetter={eventStyleGetter}
-          culture='id' // Gunakan kultur Bahasa Indonesia
+          culture='id'
           messages={{
             next: "Berikutnya",
             previous: "Sebelumnya",
