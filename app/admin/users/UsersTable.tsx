@@ -1,4 +1,4 @@
-// Lokasi File: app/admin/users/UsersTable.tsx
+// Lokasi File: app/admin/users/UsersTable.tsx (SUDAH DIPERBAIKI)
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
 import Link from "next/link";
 
-// Menggunakan komponen UI dari kode Anda
+// Komponen UI
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Tipe data dari kode Anda
+// Tipe data
 type User = {
   id: string;
   full_name: string | null;
@@ -36,24 +36,25 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fungsi hapus yang baru, menggunakan metode sisi klien
-  const handleDelete = async (userId: string) => {
+  // ====================================================================
+  // === PERBAIKAN UTAMA ADA DI FUNGSI INI ===
+  // ====================================================================
+  const handleDelete = async (userId: string, userName: string) => {
     setIsDeleting(true);
 
-    // PERHATIAN: Ini hanya menghapus data dari tabel 'users'.
-    // Untuk menghapus dari Supabase Auth, diperlukan pemanggilan fungsi di server (Edge Function).
-    // Kode ini fokus untuk menghilangkan error Server Action.
-    const { error } = await supabase
-      .from('users')
-      .delete()
-      .eq('id', userId);
+    // Panggil Edge Function 'delete-user' untuk menghapus pengguna dari auth.users
+    const { error } = await supabase.functions.invoke('delete-user', {
+      body: { user_id: userId },
+    });
 
     if (error) {
       toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
-      toast.success('Pengguna berhasil dihapus.');
-      router.refresh(); // Segarkan data di tabel
+      toast.success(`Pengguna "${userName}" berhasil dihapus secara permanen.`);
+      // Refresh halaman untuk memperbarui daftar pengguna
+      router.refresh(); 
     }
+    
     setIsDeleting(false);
   };
 
@@ -77,7 +78,6 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
             <TableCell>{user.school}</TableCell>
             <TableCell className="text-right">
               <div className="flex gap-2 justify-end">
-                {/* Tombol Aksi hanya ditampilkan untuk SuperAdmin */}
                 {userRole === 'SuperAdmin' && (
                   <>
                     <Button asChild variant="outline" size="sm">
@@ -91,17 +91,18 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
                         <AlertDialogHeader>
                           <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengguna secara permanen.
+                            Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengguna 
+                            "{user.full_name || user.email}" secara permanen dari sistem.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          {/* Tombol ini sekarang memanggil fungsi handleDelete secara langsung */}
+                          <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
+                          {/* Memanggil fungsi handleDelete dengan parameter yang benar */}
                           <AlertDialogAction 
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(user.id, user.full_name || user.email)}
                             disabled={isDeleting}
                           >
-                            {isDeleting ? 'Menghapus...' : 'Lanjutkan'}
+                            {isDeleting ? 'Menghapus...' : 'Ya, Hapus Pengguna'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

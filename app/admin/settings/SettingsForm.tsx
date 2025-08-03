@@ -1,4 +1,4 @@
-// Lokasi File: app/admin/settings/SettingsForm.tsx
+// Lokasi File: app/admin/settings/SettingsForm.tsx (SUDAH DIPERBAIKI)
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 
-// Interface dari kode Anda
 interface SchoolCoordinates {
   lat: number | string;
   lng: number | string;
@@ -23,27 +22,36 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   const supabase = createClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State untuk setiap input, diisi dengan data awal
   const [smpLat, setSmpLat] = useState(initialData.smp?.lat || '');
   const [smpLng, setSmpLng] = useState(initialData.smp?.lng || '');
   const [smkLat, setSmkLat] = useState(initialData.smk?.lat || '');
   const [smkLng, setSmkLng] = useState(initialData.smk?.lng || '');
 
-  // Fungsi yang dijalankan saat form dikirim
+  // ====================================================================
+  // === PERBAIKAN UTAMA ADA DI FUNGSI INI ===
+  // ====================================================================
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Mencegah reload halaman
+    e.preventDefault();
     setIsSubmitting(true);
 
-    // Menyiapkan data untuk diupdate
-    const settingsToUpdate = [
-      { name: 'smp_coordinates', value: { lat: parseFloat(smpLat.toString()), lng: parseFloat(smpLng.toString()) } },
-      { name: 'smk_coordinates', value: { lat: parseFloat(smkLat.toString()), lng: parseFloat(smkLng.toString()) } }
-    ];
+    // 1. Buat SATU objek JSON yang sesuai dengan struktur kolom 'setting_value'
+    const updatedValue = {
+      smp: { 
+        lat: parseFloat(smpLat.toString()), 
+        lng: parseFloat(smpLng.toString()) 
+      },
+      smk: { 
+        lat: parseFloat(smkLat.toString()), 
+        lng: parseFloat(smkLng.toString()) 
+      }
+    };
 
-    // Menggunakan 'upsert' untuk update atau insert jika belum ada
+    // 2. Gunakan 'update' untuk mengubah baris yang sudah ada, bukan 'upsert'
+    //    dan cari baris berdasarkan 'setting_key', bukan 'name'
     const { error } = await supabase
-      .from('settings') // Pastikan nama tabel ini benar
-      .upsert(settingsToUpdate, { onConflict: 'name' });
+      .from('settings')
+      .update({ setting_value: updatedValue }) // Perbarui kolom 'setting_value'
+      .eq('setting_key', 'school_coordinates'); // Di mana 'setting_key' adalah 'school_coordinates'
 
     if (error) {
       toast.error(`Gagal menyimpan pengaturan: ${error.message}`);
@@ -55,9 +63,7 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
   };
 
   return (
-    // Menggunakan onSubmit, bukan 'action'
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Pengaturan untuk SMP */}
       <div>
         <h3 className="font-medium text-lg mb-2">SMP BUDI BAKTI UTAMA</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,7 +94,6 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
         </div>
       </div>
 
-      {/* Pengaturan untuk SMK */}
       <div>
         <h3 className="font-medium text-lg mb-2">SMK BUDI BAKTI UTAMA</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

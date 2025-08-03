@@ -11,15 +11,19 @@ import getDay from 'date-fns/getDay';
 import id from 'date-fns/locale/id';
 import { createClient } from '@/utils/supabase/client';
 
+// Impor CSS wajib untuk react-big-calendar
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+// Impor file CSS custom kita (akan kita buat di langkah berikutnya)
+import './calendar-custom.css'; 
 
 const locales = {
   'id': id,
 };
+
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }), // Minggu dimulai hari Senin
   getDay,
   locales,
 });
@@ -34,20 +38,16 @@ export default function AttendanceCalendar() {
 
   useEffect(() => {
     const fetchAttendance = async () => {
-      // PERBAIKAN: Gunakan getSession() untuk mendapatkan sesi yang aktif
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // Jika tidak ada sesi (pengguna tidak login), hentikan eksekusi
       if (!session) {
         console.log("Tidak ada sesi, data absensi tidak diambil.");
         return;
       }
 
-      // Ambil data absensi untuk user yang sedang login
       const { data, error } = await supabase
         .from('absensi')
         .select('check_in_time, status')
-        .eq('user_id', session.user.id); // Gunakan ID dari sesi
+        .eq('user_id', session.user.id);
 
       if (error) {
         console.error('Error fetching attendance:', error);
@@ -73,49 +73,39 @@ export default function AttendanceCalendar() {
 
   const eventStyleGetter = (event: AttendanceEvent) => {
     let backgroundColor = '#808080';
-    if (event.status === 'Hadir') backgroundColor = '#22c55e';
-    if (event.status === 'Izin') backgroundColor = '#3b82f6';
-    if (event.status === 'Sakit') backgroundColor = '#f59e0b';
+    if (event.status === 'Hadir') backgroundColor = '#22c55e'; // Green
+    if (event.status === 'Izin') backgroundColor = '#3b82f6';  // Blue
+    if (event.status === 'Sakit') backgroundColor = '#f59e0b'; // Amber
 
     const style = {
       backgroundColor,
-      borderRadius: '5px',
-      opacity: 0.8,
+      borderRadius: '4px',
       color: 'white',
-      border: '0px',
-      display: 'block',
+      border: 'none',
+      fontSize: '0.75rem',
+      padding: '2px 4px',
     };
-    return {
-      style: style,
-    };
+    return { style };
   };
 
+  // HANYA RENDER KALENDER, TANPA DIV PEMBUNGKUS DAN JUDUL
   return (
-    <div className="p-6 bg-white rounded-xl shadow-lg mt-8">
-      <h2 className="text-2xl font-bold text-center mb-4">Kalender Kehadiran</h2>
-      <div style={{ height: '600px' }}>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 500 }}
-          eventPropGetter={eventStyleGetter}
-          culture='id'
-          messages={{
-            next: "Berikutnya",
-            previous: "Sebelumnya",
-            today: "Hari Ini",
-            month: "Bulan",
-            week: "Minggu",
-            day: "Hari",
-            agenda: "Agenda",
-            date: "Tanggal",
-            time: "Waktu",
-            event: "Acara",
-          }}
-        />
-      </div>
+    <div className="calendar-container">
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        eventPropGetter={eventStyleGetter}
+        culture='id'
+        views={['month']} // Hanya menampilkan view bulan agar lebih simpel
+        messages={{
+          next: "›",
+          previous: "‹",
+          today: "Hari Ini",
+          month: "Bulan",
+        }}
+      />
     </div>
   );
 }

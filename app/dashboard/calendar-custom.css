@@ -1,0 +1,69 @@
+/* Lokasi: app/dashboard/calendar-custom.css (SUDAH DIPERBAIKI) */
+
+/* Aturan ini tetap sama */
+.calendar-container {
+  height: 450px;
+  max-height: 50vh;
+}
+
+/* 
+  PERBAIKAN: Semua selector di bawah ini diawali dengan .calendar-container
+  agar gayanya tidak "bocor" keluar.
+*/
+
+.calendar-container .rbc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.calendar-container .rbc-toolbar .rbc-toolbar-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* INI PERBAIKAN UTAMA: Selector menjadi jauh lebih spesifik */
+.calendar-container .rbc-btn-group button {
+  border: 1px solid #ddd !important;
+  color: #555 !important;
+  padding: 0.3rem 0.8rem !important;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendar-container .rbc-btn-group button:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.calendar-container .rbc-btn-group button.rbc-active {
+  background-color: #6d28d9 !important;
+  color: white !important;
+  border-color: #6d28d9 !important;
+}
+
+.calendar-container .rbc-header {
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem 0;
+  text-align: center;
+  font-weight: 500;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.calendar-container .rbc-month-view, 
+.calendar-container .rbc-day-bg {
+  border-color: #f0f0f0 !important;
+}
+
+.calendar-container .rbc-day-bg.rbc-today {
+  background-color: #f3e8ff;
+}
+
+.calendar-container .rbc-event {
+  padding: 2px 5px !important;
+  font-size: 0.75rem !important;
+  border: none !important;
+}
