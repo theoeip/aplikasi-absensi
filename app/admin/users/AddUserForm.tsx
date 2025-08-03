@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createClient } from '@/utils/supabase/client';
+import { addUser } from './actions'; // <-- LANGKAH 1: Impor Server Action yang benar
 
 // Menggunakan komponen UI dari kode Anda
 import { Button } from '@/components/ui/button';
@@ -15,21 +15,18 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AddUserForm({ userRole }: { userRole: string }) {
-  const supabase = createClient();
   const router = useRouter();
 
-  // --- State untuk mengelola semua input form ---
+  // State untuk mengelola semua input form
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
   const [school, setSchool] = useState('');
-  
-  // --- STATE BARU UNTUK FITUR TAMBAHAN ---
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- EFEK BARU: Untuk membuat email secara otomatis ---
+  // useEffect untuk membuat email otomatis (sudah benar, tidak perlu diubah)
   useEffect(() => {
     const normalizeName = (name: string) => name.toLowerCase().replace(/\s+/g, '');
     const getSchoolDomain = (sch: string) => {
@@ -37,60 +34,47 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
       if (sch === 'SMK BUDI BAKTI UTAMA') return 'smkbbu.id';
       return '';
     };
-
-    // Tentukan nilai sekolah yang akan digunakan untuk membuat email
-    const effectiveSchool = userRole === 'SuperAdmin' 
-      ? school 
-      : (userRole === 'AdminSMP' ? 'SMP BUDI BAKTI UTAMA' : 'SMK BUDI BAKTI UTAMA');
-
-    // Buat email hanya jika semua field yang dibutuhkan sudah diisi
+    const effectiveSchool = userRole === 'SuperAdmin' ? school : (userRole === 'AdminSMP' ? 'SMP BUDI BAKTI UTAMA' : 'SMK BUDI BAKTI UTAMA');
     if (fullName && role && effectiveSchool) {
       const namePart = normalizeName(fullName);
       const rolePart = role.toLowerCase();
       const schoolPart = getSchoolDomain(effectiveSchool);
-      
       if (namePart && rolePart && schoolPart) {
         setEmail(`${namePart}@${rolePart}.${schoolPart}`);
       }
     } else {
       setEmail('');
     }
-  }, [fullName, role, school, userRole]); // Jalankan ulang saat nilai-nilai ini berubah
+  }, [fullName, role, school, userRole]);
 
+  // --- PERUBAHAN UTAMA DI FUNGSI INI ---
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!email) {
-      toast.error("Email tidak dapat dibuat. Pastikan semua kolom terisi.");
-      setIsSubmitting(false);
-      return;
-    }
+    // Buat objek FormData untuk dikirim ke Server Action
+    const formData = new FormData();
+    formData.append('full_name', fullName);
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('role', role);
+    // Tentukan sekolah berdasarkan peran admin
+    const schoolValue = userRole === 'SuperAdmin' ? school : (userRole === 'AdminSMP' ? 'SMP BUDI BAKTI UTAMA' : 'SMK BUDI BAKTI UTAMA');
+    formData.append('school', schoolValue);
 
-    // Panggil API Supabase dengan data dari state
-    const { error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: role,
-          // Gunakan nilai sekolah yang sudah ditentukan
-          school: userRole === 'SuperAdmin' ? school : (userRole === 'AdminSMP' ? 'SMP BUDI BAKTI UTAMA' : 'SMK BUDI BAKTI UTAMA'),
-        }
-      }
-    });
+    // Panggil Server Action 'addUser', bukan supabase.auth.signUp()
+    const result = await addUser(formData);
 
-    if (error) {
-      toast.error(`Gagal menambahkan pengguna: ${error.message}`);
-    } else {
-      toast.success('Pengguna baru berhasil ditambahkan!');
+    if (result.success) {
+      toast.success(result.message);
       // Reset form fields
       setFullName('');
       setPassword('');
       setRole('');
       setSchool('');
       router.refresh();
+    } else {
+      toast.error(result.message);
     }
     
     setIsSubmitting(false);
@@ -102,7 +86,9 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
         <CardTitle>Tambah Pengguna Baru</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Form ini sekarang akan memanggil fungsi handleSubmit yang sudah diperbaiki */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Semua input di bawah ini tidak perlu diubah, sudah benar */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nama Lengkap</Label>
