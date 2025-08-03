@@ -2,13 +2,9 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    // !! PERINGATAN !!
-    // Secara sengaja mengizinkan build produksi untuk berhasil
-    // meskipun proyek Anda memiliki eror tipe.
-    // Ini adalah solusi sementara untuk membuat situs Anda online.
-    ignoreBuildErrors: true,
-  },
+  // Kosong, karena kita tidak memerlukan konfigurasi khusus saat ini.
+  // Dengan menghapus 'ignoreBuildErrors', kita mengaktifkan kembali
+  // pemeriksaan tipe saat build, yang merupakan praktik terbaik.
 };
 
 export default nextConfig;
