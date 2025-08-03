@@ -1,21 +1,9 @@
-// Lokasi File: app/page.tsx
+// Lokasi File: app/page.tsx (SUDAH DIPERBAIKI)
 
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+import HomePageClient from "./HomePageClient";
 
-export default async function Page() {
-  const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Logika pengalihan (redirect)
-  if (user) {
-    // Jika ada pengguna yang login, arahkan ke dashboard
-    return redirect('/dashboard')
-  }
-
-  // Jika tidak ada pengguna, arahkan ke halaman login
-  return redirect('/login')
+export default function HomePage() {
+  // Halaman utama sekarang hanya menampilkan komponen klien
+  // yang akan menangani logika otentikasi dan pengalihan.
+  return <HomePageClient />;
 }

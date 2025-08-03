@@ -1,11 +1,15 @@
-// app/admin/users/UsersTable.tsx
+// Lokasi File: app/admin/users/UsersTable.tsx
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+import { toast } from 'sonner';
 import Link from "next/link";
-import { deleteUser } from "./actions";
+
+// Menggunakan komponen UI dari kode Anda
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Tipe data dari kode Anda
 type User = {
   id: string;
   full_name: string | null;
@@ -27,14 +32,29 @@ type User = {
 };
 
 export default function UsersTable({ users, userRole }: { users: User[], userRole: string }) {
-  
-  const handleDelete = async (formData: FormData) => {
-    const result = await deleteUser(formData);
-    if (result.success) {
-        toast.success(result.message);
+  const supabase = createClient();
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Fungsi hapus yang baru, menggunakan metode sisi klien
+  const handleDelete = async (userId: string) => {
+    setIsDeleting(true);
+
+    // PERHATIAN: Ini hanya menghapus data dari tabel 'users'.
+    // Untuk menghapus dari Supabase Auth, diperlukan pemanggilan fungsi di server (Edge Function).
+    // Kode ini fokus untuk menghilangkan error Server Action.
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
-        toast.error(result.message);
+      toast.success('Pengguna berhasil dihapus.');
+      router.refresh(); // Segarkan data di tabel
     }
+    setIsDeleting(false);
   };
 
   return (
@@ -65,7 +85,7 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">Delete</Button>
+                        <Button variant="destructive" size="sm" disabled={isDeleting}>Delete</Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -76,10 +96,13 @@ export default function UsersTable({ users, userRole }: { users: User[], userRol
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <form action={handleDelete}>
-                            <input type="hidden" name="userId" value={user.id} />
-                            <AlertDialogAction type="submit">Lanjutkan</AlertDialogAction>
-                          </form>
+                          {/* Tombol ini sekarang memanggil fungsi handleDelete secara langsung */}
+                          <AlertDialogAction 
+                            onClick={() => handleDelete(user.id)}
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? 'Menghapus...' : 'Lanjutkan'}
+                          </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

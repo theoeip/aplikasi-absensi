@@ -1,6 +1,16 @@
-// app/admin/users/[id]/edit/page.tsx
+// Lokasi File: app/admin/users/[id]/edit/page.tsx
+
 import { supabaseAdmin } from "@/utils/supabase/admin";
-import { updateUser } from "../../actions"; // <-- IMPORT Server Action
+import EditUserForm from "./EditUserForm"; // <-- Impor komponen form baru
+
+export async function generateStaticParams() {
+  const { data: users, error } = await supabaseAdmin.from('users').select('id');
+  if (error) {
+    console.error('Gagal mengambil ID pengguna dari Supabase saat build:', error);
+    return [];
+  }
+  return users?.map((user) => ({ id: user.id.toString() })) || [];
+}
 
 export default async function EditUserPage({ params }: { params: { id: string } }) {
   const userId = params.id;
@@ -32,45 +42,21 @@ export default async function EditUserPage({ params }: { params: { id: string } 
       );
   }
 
+  // Gabungkan data untuk dikirim sebagai props
+  const userData = {
+    id: profile.id,
+    full_name: profile.full_name,
+    email: authUser.user.email,
+    role: profile.role,
+    school: profile.school,
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Edit Pengguna: {profile.full_name}</h1>
-      
       <div className="p-6 bg-white rounded-lg shadow-md">
-        {/* Formulir sekarang terhubung ke Server Action 'updateUser' */}
-        <form action={updateUser} className="space-y-4">
-            
-            {/* Input tersembunyi untuk mengirim ID pengguna */}
-            <input type="hidden" name="userId" value={userId} />
-
-            <div>
-                <label className="block font-medium">Nama Lengkap</label>
-                <input name="full_name" defaultValue={profile.full_name || ''} className="w-full p-2 border rounded" required />
-            </div>
-            <div>
-                <label className="block font-medium">Email</label>
-                <input name="email" type="email" defaultValue={authUser.user.email || ''} className="w-full p-2 border rounded bg-gray-100" readOnly />
-                <p className="text-xs text-gray-500">Email tidak dapat diubah melalui form ini.</p>
-            </div>
-            <div>
-                <label className="block font-medium">Peran</label>
-                <select name="role" defaultValue={profile.role || ''} className="w-full p-2 border rounded" required>
-                    <option value="Admin">Admin</option>
-                    <option value="Guru">Guru</option>
-                    <option value="Siswa">Siswa</option>
-                </select>
-            </div>
-            <div>
-                <label className="block font-medium">Sekolah</label>
-                <select name="school" defaultValue={profile.school || ''} className="w-full p-2 border rounded" required>
-                    <option value="SMP BUDI BAKTI UTAMA">SMP BUDI BAKTI UTAMA</option>
-                    <option value="SMK BUDI BAKTI UTAMA">SMK BUDI BAKTI UTAMA</option>
-                </select>
-            </div>
-            <button type="submit" className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700">
-                Simpan Perubahan
-            </button>
-        </form>
+        {/* Gunakan komponen form baru di sini */}
+        <EditUserForm userData={userData} />
       </div>
     </div>
   );

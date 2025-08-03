@@ -4,7 +4,37 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import EditAttendanceForm from "./EditAttendanceForm";
 
-// INI ADALAH PERBAIKAN PENTING
+// ====================================================================
+// BAGIAN PENTING: Fungsi untuk generate halaman statis absensi
+// ====================================================================
+export async function generateStaticParams() {
+  console.log("Mengambil ID absensi untuk generateStaticParams...");
+
+  // DISESUAIKAN: Menggunakan nama tabel 'absensi' sesuai kode Anda.
+  const { data: attendances, error } = await supabaseAdmin.from('absensi').select('id');
+
+  if (error) {
+    console.error('Gagal mengambil ID absensi dari Supabase saat build:', error);
+    return [];
+  }
+
+  if (!attendances || attendances.length === 0) {
+    console.log('Tidak ada data absensi ditemukan untuk dibuatkan halaman statis.');
+    return [];
+  }
+
+  console.log(`Ditemukan ${attendances.length} data absensi. Membuat halaman...`);
+
+  return attendances.map((attendance) => ({
+    id: attendance.id.toString(),
+  }));
+}
+// ====================================================================
+// Akhir dari bagian penting
+// ====================================================================
+
+
+// Tipe data yang Anda definisikan
 type PageProps = {
   params: { id: string };
 };
@@ -18,7 +48,7 @@ interface AttendanceWithUser {
   } | null;
 }
 
-// Menggunakan 'PageProps' yang sudah didefinisikan
+// Komponen halaman Anda yang sudah diperbarui
 export default async function EditAttendancePage({ params }: PageProps) {
   const attendanceId = params.id;
 

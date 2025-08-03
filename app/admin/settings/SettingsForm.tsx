@@ -1,14 +1,14 @@
 // Lokasi File: app/admin/settings/SettingsForm.tsx
 'use client';
 
-import { updateSettings } from "./actions";
+import { useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 
-// PERBAIKAN: Membuat interface untuk mendefinisikan bentuk data pengaturan.
-// Ini menggantikan tipe 'any' dan membuat kode lebih aman.
+// Interface dari kode Anda
 interface SchoolCoordinates {
   lat: number | string;
   lng: number | string;
@@ -19,22 +19,44 @@ interface SettingsData {
   smk?: SchoolCoordinates;
 }
 
-// PERBAIKAN: Menggunakan interface 'SettingsData' sebagai tipe untuk prop.
 export default function SettingsForm({ initialData }: { initialData: SettingsData }) {
+  const supabase = createClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fungsi ini akan dipanggil saat form disubmit
-  const handleUpdateSettings = async (formData: FormData) => {
-    const result = await updateSettings(formData);
-    
-    if (result && result.success) {
-      toast.success(result.message);
-    } else if (result) {
-      toast.error(result.message);
+  // State untuk setiap input, diisi dengan data awal
+  const [smpLat, setSmpLat] = useState(initialData.smp?.lat || '');
+  const [smpLng, setSmpLng] = useState(initialData.smp?.lng || '');
+  const [smkLat, setSmkLat] = useState(initialData.smk?.lat || '');
+  const [smkLng, setSmkLng] = useState(initialData.smk?.lng || '');
+
+  // Fungsi yang dijalankan saat form dikirim
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Mencegah reload halaman
+    setIsSubmitting(true);
+
+    // Menyiapkan data untuk diupdate
+    const settingsToUpdate = [
+      { name: 'smp_coordinates', value: { lat: parseFloat(smpLat.toString()), lng: parseFloat(smpLng.toString()) } },
+      { name: 'smk_coordinates', value: { lat: parseFloat(smkLat.toString()), lng: parseFloat(smkLng.toString()) } }
+    ];
+
+    // Menggunakan 'upsert' untuk update atau insert jika belum ada
+    const { error } = await supabase
+      .from('settings') // Pastikan nama tabel ini benar
+      .upsert(settingsToUpdate, { onConflict: 'name' });
+
+    if (error) {
+      toast.error(`Gagal menyimpan pengaturan: ${error.message}`);
+    } else {
+      toast.success('Pengaturan berhasil disimpan!');
     }
+
+    setIsSubmitting(false);
   };
 
   return (
-    <form action={handleUpdateSettings} className="space-y-6">
+    // Menggunakan onSubmit, bukan 'action'
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Pengaturan untuk SMP */}
       <div>
         <h3 className="font-medium text-lg mb-2">SMP BUDI BAKTI UTAMA</h3>
@@ -45,9 +67,10 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               id="smp_lat"
               type="number" 
               step="any"
-              name="smp_lat" 
-              defaultValue={initialData.smp?.lat}
+              value={smpLat}
+              onChange={(e) => setSmpLat(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
@@ -56,9 +79,10 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               id="smp_lng"
               type="number" 
               step="any"
-              name="smp_lng" 
-              defaultValue={initialData.smp?.lng}
+              value={smpLng}
+              onChange={(e) => setSmpLng(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -74,9 +98,10 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               id="smk_lat"
               type="number" 
               step="any"
-              name="smk_lat" 
-              defaultValue={initialData.smk?.lat}
+              value={smkLat}
+              onChange={(e) => setSmkLat(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
@@ -85,16 +110,19 @@ export default function SettingsForm({ initialData }: { initialData: SettingsDat
               id="smk_lng"
               type="number" 
               step="any"
-              name="smk_lng" 
-              defaultValue={initialData.smk?.lng}
+              value={smkLng}
+              onChange={(e) => setSmkLng(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
         </div>
       </div>
 
       <div className="pt-4">
-        <Button type="submit">Simpan Pengaturan</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan'}
+        </Button>
       </div>
     </form>
   );
