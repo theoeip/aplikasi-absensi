@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import EditAttendanceForm from "./EditAttendanceForm";
 
-// PERBAIKAN: Mendefinisikan tipe untuk props dengan cara yang standar.
+// INI ADALAH PERBAIKAN PENTING
 type PageProps = {
   params: { id: string };
 };
@@ -18,7 +18,7 @@ interface AttendanceWithUser {
   } | null;
 }
 
-// PERBAIKAN: Menggunakan 'PageProps' yang sudah didefinisikan.
+// Menggunakan 'PageProps' yang sudah didefinisikan
 export default async function EditAttendancePage({ params }: PageProps) {
   const attendanceId = params.id;
 
