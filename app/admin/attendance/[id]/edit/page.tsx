@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/utils/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import EditAttendanceForm from "./EditAttendanceForm";
 
-// PERBAIKAN: Mendefinisikan tipe untuk props dengan cara yang lebih standar.
+// PERBAIKAN: Mendefinisikan tipe untuk props dengan cara yang standar.
 type PageProps = {
   params: { id: string };
 };

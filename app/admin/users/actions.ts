@@ -5,14 +5,13 @@ import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers'; // <-- PERBAIKAN 1: Impor cookies
+import { cookies } from 'next/headers';
 
 export async function addUser(formData: FormData) {
   // Log untuk debugging, akan muncul di Edge Function Log
   console.log("--- Add User Action Triggered ---");
   console.log("Is service key present in env?", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  // PERBAIKAN 2: Gunakan cookies saat memanggil createClient
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
@@ -33,7 +32,6 @@ export async function addUser(formData: FormData) {
       school: formData.get('school') as string,
     };
 
-    // Validasi input dasar
     if (!data.email || !data.password || !data.full_name || !data.role || !data.school) {
         return { success: false, message: 'Semua kolom wajib diisi.' };
     }
@@ -49,7 +47,8 @@ export async function addUser(formData: FormData) {
     }
 
     console.log("Creating user with email:", data.email);
-    const { data: newUserData, error } = await supabaseAdmin.auth.admin.createUser({
+    // PERBAIKAN: Menghapus 'data: newUserData' karena tidak digunakan.
+    const { error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
