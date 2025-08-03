@@ -57,13 +57,10 @@ export default function LoginPage() {
       return;
     }
     
-    // 4. PERBAIKAN FINAL: Arahkan pengguna berdasarkan peran aslinya
+    // 4. PERBAIKAN: Arahkan semua pengguna ke /dashboard setelah login.
+    // Layout di /dashboard atau /admin akan menangani tampilan yang sesuai.
     toast.success('Login berhasil!');
-    if (isUserActuallyAdmin) {
-      router.replace('/admin'); // Arahkan admin ke panel admin
-    } else {
-      router.replace('/dashboard'); // Arahkan non-admin ke dashboard mereka
-    }
+    router.replace('/dashboard');
   };
 
   const backToMain = () => {
