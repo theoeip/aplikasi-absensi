@@ -3,13 +3,15 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/sonner"; // <-- INI YANG PALING PENTING
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Anda bisa mendefinisikan metadata PWA di sini juga, tapi yang utama ada di manifest.json
 export const metadata: Metadata = {
   title: "Aplikasi Absensi",
   description: "Sistem Absensi Budi Bakti Utama",
+  manifest: "/manifest.json", // <-- Menambahkan link manifest di metadata
 };
 
 export default function RootLayout({
@@ -19,9 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
+      {/* PERBAIKAN: Menambahkan <head> untuk menaruh tag PWA */}
+      <head>
+        {/* Mengatur warna tema untuk address bar browser di HP */}
+        <meta name="theme-color" content="#4f46e5" />
+      </head>
       <body className={inter.className}>
         {children}
-        {/* Ini akan menjadi "layar" untuk menampilkan semua notifikasi */}
         <Toaster richColors position="top-right" /> 
       </body>
     </html>
