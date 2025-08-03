@@ -1,16 +1,18 @@
-// app/login/page.tsx
+// Lokasi File: app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
+// Menggunakan komponen UI dari kode Anda sebelumnya
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGraduationCap, faUserGraduate, faChalkboardTeacher, faUserShield, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { toast } from 'sonner';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,6 +26,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
+    // 1. Coba login dengan Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -35,36 +38,32 @@ export default function LoginPage() {
       return;
     }
 
+    // 2. Dapatkan peran asli pengguna dari database
     const actualUserRole = data.session.user.user_metadata?.role;
     const isUserActuallyAdmin = actualUserRole === 'SuperAdmin' || actualUserRole === 'AdminSMP' || actualUserRole === 'AdminSMK';
 
-    // --- LOGIKA VALIDASI PERAN YANG DIPERKETAT ---
+    // 3. Validasi peran yang dipilih saat login
     let isValidRole = false;
-    
-    // Kasus 1: Mencoba login sebagai "Admin"
-    if (loginRole === 'Admin') {
-        if (isUserActuallyAdmin) {
-            isValidRole = true;
-        }
-    } 
-    // Kasus 2: Mencoba login sebagai "Guru" atau "Siswa"
-    else {
-        // Cek apakah peran yang dipilih sama dengan peran asli, DAN peran asli BUKAN salah satu dari peran admin
-        if (loginRole === actualUserRole && !isUserActuallyAdmin) {
-            isValidRole = true;
-        }
+    if (loginRole === 'Admin' && isUserActuallyAdmin) {
+      isValidRole = true;
+    } else if (loginRole === actualUserRole && !isUserActuallyAdmin) {
+      isValidRole = true;
     }
-    // ---------------------------------------------
 
     if (!isValidRole) {
-      toast.error(`Login gagal. Akun ini tidak terdaftar atau tidak diizinkan untuk login sebagai ${loginRole}.`);
-      await supabase.auth.signOut(); // Penting: Batalkan sesi yang setengah jadi
+      toast.error(`Login gagal. Akun ini tidak diizinkan untuk login sebagai ${loginRole}.`);
+      await supabase.auth.signOut(); // Batalkan sesi yang salah
       setLoading(false);
       return;
     }
     
+    // 4. PERBAIKAN FINAL: Arahkan pengguna berdasarkan peran aslinya
     toast.success('Login berhasil!');
-    router.refresh(); // Biarkan middleware mengarahkan ke halaman yang benar
+    if (isUserActuallyAdmin) {
+      router.replace('/admin'); // Arahkan admin ke panel admin
+    } else {
+      router.replace('/dashboard'); // Arahkan non-admin ke dashboard mereka
+    }
   };
 
   const backToMain = () => {
@@ -76,8 +75,8 @@ export default function LoginPage() {
   // Tampilan pilihan peran
   if (!loginRole) {
     return (
-      <div className="flex items-center justify-center min-h-screen gradient-bg p-4">
-        <Card className="w-full max-w-sm text-center shadow-2xl">
+      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 p-4">
+        <Card className="w-full max-w-sm text-center shadow-xl">
           <CardHeader>
             <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <FontAwesomeIcon icon={faGraduationCap} className="text-white text-3xl" />
@@ -106,8 +105,8 @@ export default function LoginPage() {
 
   // Tampilan form login
   return (
-    <div className="flex items-center justify-center min-h-screen gradient-bg p-4">
-        <Card className="w-full max-w-sm shadow-2xl relative">
+    <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 p-4">
+        <Card className="w-full max-w-sm shadow-xl relative">
             <Button variant="ghost" size="icon" className="absolute top-4 left-4" onClick={backToMain}>
                 <FontAwesomeIcon icon={faArrowLeft} className="text-xl" />
             </Button>
