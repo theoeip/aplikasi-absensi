@@ -1,4 +1,4 @@
-// Buat file baru di: app/admin/attendance/AttendanceReport.tsx
+// Lokasi File: app/admin/attendance/AttendanceReport.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -31,7 +31,7 @@ function AttendanceReportComponent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  // State untuk data, loading, dan role pengguna
+  // State untuk data, loading, dan peran pengguna
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [adminRole, setAdminRole] = useState<string | undefined>(undefined);
@@ -46,12 +46,19 @@ function AttendanceReportComponent() {
       const role = session?.user?.user_metadata?.role;
       setAdminRole(role);
 
+      // Jika tidak ada sesi/peran, jangan lanjutkan
+      if (!session || !role) {
+        setIsLoading(false);
+        return;
+      }
+
       // 2. Ambil parameter filter dari URL
       const startDate = searchParams.get('start');
       const endDate = searchParams.get('end');
       const schoolFilter = searchParams.get('school');
 
       // 3. Bangun query Supabase
+      // PERBAIKAN: Gunakan supabase biasa, bukan supabaseAdmin di sisi klien
       let query = supabase
         .from('absensi')
         .select(`id, check_in_time, status, users!inner(full_name, school)`);
