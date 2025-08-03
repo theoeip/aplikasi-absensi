@@ -5,7 +5,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { supabaseAdmin } from '@/utils/supabase/admin';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation'; // <-- PERBAIKAN 1: Dihapus karena tidak pernah digunakan di file ini.
 import { cookies } from 'next/headers';
 
 // Tipe untuk hasil kembalian agar seragam di semua fungsi
@@ -15,7 +15,7 @@ type ActionResult = {
 };
 
 // =========================================================================
-// FUNGSI ANDA YANG SUDAH ADA (TIDAK DIUBAH)
+// FUNGSI ANDA YANG SUDAH ADA (DENGAN PERBAIKAN)
 // =========================================================================
 
 export async function addUser(formData: FormData): Promise<ActionResult> {
@@ -77,9 +77,14 @@ export async function addUser(formData: FormData): Promise<ActionResult> {
     revalidatePath('/admin/users');
     return { success: true, message: `Pengguna ${data.full_name} berhasil dibuat.` };
 
-  } catch (e: any) {
+  } catch (e) { // <-- PERBAIKAN 2: Mengganti 'e: any' menjadi 'e'
+    // Cara yang lebih aman untuk menangani objek error
+    let errorMessage = 'Terjadi kesalahan tak terduga di server.';
+    if (e instanceof Error) {
+        errorMessage = e.message;
+    }
     console.error("FATAL ERROR in addUser action:", e);
-    return { success: false, message: 'Terjadi kesalahan tak terduga di server.' };
+    return { success: false, message: errorMessage };
   }
 }
 
@@ -98,20 +103,17 @@ export async function deleteUser(formData: FormData): Promise<ActionResult> {
 
 // =========================================================================
 // FUNGSI BARU UNTUK UPDATE PROFIL BESERTA PASSWORD
-// Ini yang akan dipanggil dari EditUserForm.tsx Anda
 // =========================================================================
 export async function updateUserAndPotentiallyPassword(userId: string, formData: FormData): Promise<ActionResult> {
   const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  // Ambil semua data dari form
   const fullName = formData.get('full_name') as string;
   const role = formData.get('role') as string;
   const school = formData.get('school') as string;
   const newPassword = formData.get('newPassword') as string;
   const confirmPassword = formData.get('confirmPassword') as string;
 
-  // 1. Logika untuk mengubah password (hanya jika diisi)
   if (newPassword) {
     if (newPassword !== confirmPassword) {
       return { success: false, message: 'Password baru dan konfirmasi tidak cocok!' };
@@ -120,8 +122,6 @@ export async function updateUserAndPotentiallyPassword(userId: string, formData:
       return { success: false, message: 'Password minimal harus 6 karakter.' };
     }
 
-    // Panggil Edge Function 'admin-update-user-password' yang sudah di-deploy
-    // Perhatikan: kita menggunakan client Supabase biasa di sini untuk memanggil function.
     const { error: functionError } = await supabase.functions.invoke('admin-update-user-password', {
       body: {
         userId: userId,
@@ -135,17 +135,14 @@ export async function updateUserAndPotentiallyPassword(userId: string, formData:
     }
   }
 
-  // 2. Logika untuk mengubah data lain (full_name, role, school)
-  // Kita gunakan supabaseAdmin agar bisa mengubah data user lain.
   const dataToUpdate = {
     full_name: fullName,
     role: role,
     school: school,
   };
 
-  // Update data di tabel 'users' (atau 'profiles')
   const { error: profileError } = await supabaseAdmin
-    .from('users') // GANTI NAMA TABEL JIKA PERLU
+    .from('users')
     .update(dataToUpdate)
     .eq('id', userId);
 
@@ -153,18 +150,15 @@ export async function updateUserAndPotentiallyPassword(userId: string, formData:
     return { success: false, message: `Gagal update profil: ${profileError.message}` };
   }
 
-  // Update juga metadata di Auth agar sinkron
   const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
     userId,
     { user_metadata: dataToUpdate }
   );
   
   if (authError) {
-    // Meskipun profil berhasil diubah, metadata gagal. Ini harus dilaporkan.
     return { success: false, message: `Gagal update auth metadata: ${authError.message}` };
   }
 
-  // 3. Revalidasi path agar data di UI langsung ter-update
   revalidatePath('/admin/users');
   revalidatePath(`/admin/users/${userId}/edit`);
 
