@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { updateUserAndPotentiallyPassword } from '../../actions'; // <-- LANGKAH 1: Impor Server Action
+import { updateUserAndPotentiallyPassword } from '../../actions';
 
 // Definisikan tipe data untuk props
 interface UserData {
@@ -23,45 +23,41 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
   const [fullName, setFullName] = useState(userData.full_name || '');
   const [role, setRole] = useState(userData.role || '');
   const [school, setSchool] = useState(userData.school || '');
-  // STATE BARU untuk password
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
+  // --- STATE BARU UNTUK MENAMPILKAN PASSWORD ---
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // MODIFIKASI UTAMA: Menggunakan Server Action di dalam handleSubmit
+  // Fungsi handleSubmit Anda tidak perlu diubah, sudah benar.
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Tetap cegah reload halaman
+    e.preventDefault();
     setIsSubmitting(true);
 
-    // Validasi client-side cepat untuk password
     if (newPassword && newPassword !== confirmPassword) {
       toast.error('Password baru dan konfirmasi tidak cocok!');
       setIsSubmitting(false);
       return;
     }
 
-    // Buat objek FormData untuk dikirim ke Server Action
     const formData = new FormData();
     formData.append('full_name', fullName);
     formData.append('role', role);
     formData.append('school', school);
-    // Tambahkan password hanya jika diisi
+    
     if (newPassword) {
       formData.append('newPassword', newPassword);
       formData.append('confirmPassword', confirmPassword);
     }
     
-    // Panggil Server Action yang sudah kita buat
     const result = await updateUserAndPotentiallyPassword(userData.id, formData);
 
-    // Tangani hasil dari Server Action
     if (result.success) {
       toast.success(result.message);
-      // Reset field password setelah sukses
       setNewPassword('');
       setConfirmPassword('');
-      router.refresh(); // Segarkan data di halaman untuk melihat perubahan
+      router.refresh();
     } else {
       toast.error(result.message);
     }
@@ -71,7 +67,7 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Input Nama Lengkap */}
+      {/* ... Input Nama Lengkap, Email, Peran & Sekolah (Tidak ada perubahan di sini) ... */}
       <div>
         <label className="block font-medium">Nama Lengkap</label>
         <input 
@@ -82,8 +78,6 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
           disabled={isSubmitting}
         />
       </div>
-
-      {/* Input Email (Read-Only) */}
       <div>
         <label className="block font-medium">Email</label>
         <input 
@@ -93,8 +87,6 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
           readOnly 
         />
       </div>
-
-      {/* Input Peran & Sekolah */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block font-medium">Peran</label>
@@ -127,15 +119,33 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
         </div>
       </div>
       
-      {/* --- BAGIAN UBAH PASSWORD (BARU) --- */}
+      {/* --- BAGIAN UBAH PASSWORD (DENGAN PENAMBAHAN CHECKBOX) --- */}
       <div className="pt-6 border-t border-gray-200">
-        <h3 className="text-lg font-semibold leading-6 text-gray-900">Ubah Password</h3>
-        <p className="mt-1 text-sm text-gray-600">Isi hanya jika Anda ingin mengubah password pengguna ini.</p>
+        <div className="flex justify-between items-center">
+            <div>
+                <h3 className="text-lg font-semibold leading-6 text-gray-900">Ubah Password</h3>
+                <p className="mt-1 text-sm text-gray-600">Isi hanya jika Anda ingin mengubah password pengguna ini.</p>
+            </div>
+            {/* === CHECKBOX BARU === */}
+            <div className="flex items-center">
+              <input
+                id="edit-show-password"
+                type="checkbox"
+                checked={showPassword}
+                onChange={() => setShowPassword(!showPassword)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+              />
+              <label htmlFor="edit-show-password" className="ml-2 block text-sm text-gray-900">
+                Tampilkan
+              </label>
+            </div>
+        </div>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label className="block font-medium">Password Baru</label>
                 <input
-                    type="password"
+                    // === PERUBAHAN TIPE INPUT ===
+                    type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full p-2 border rounded" 
@@ -146,7 +156,8 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
             <div>
                 <label className="block font-medium">Konfirmasi Password Baru</label>
                 <input
-                    type="password"
+                    // === PERUBAHAN TIPE INPUT ===
+                    type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full p-2 border rounded" 
