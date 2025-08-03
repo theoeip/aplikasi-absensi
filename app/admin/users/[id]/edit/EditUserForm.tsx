@@ -1,13 +1,13 @@
-// Buat file baru di: app/admin/users/[id]/edit/EditUserForm.tsx
+// File: app/admin/users/[id]/edit/EditUserForm.tsx
 
 'use client';
 
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
 import { toast } from 'sonner';
+import { updateUserAndPotentiallyPassword } from '../../actions'; // <-- LANGKAH 1: Impor Server Action
 
-// Definisikan tipe data untuk props, agar kode lebih aman dan jelas
+// Definisikan tipe data untuk props
 interface UserData {
   id: string;
   full_name: string | null;
@@ -17,41 +17,60 @@ interface UserData {
 }
 
 export default function EditUserForm({ userData }: { userData: UserData }) {
-  const supabase = createClient();
   const router = useRouter();
 
-  // State untuk setiap input form dan status loading
+  // State untuk setiap input form
   const [fullName, setFullName] = useState(userData.full_name || '');
   const [role, setRole] = useState(userData.role || '');
   const [school, setSchool] = useState(userData.school || '');
+  // STATE BARU untuk password
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // MODIFIKASI UTAMA: Menggunakan Server Action di dalam handleSubmit
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault(); // Tetap cegah reload halaman
     setIsSubmitting(true);
 
-    // Data yang akan diupdate di tabel 'users'
-    const { error } = await supabase
-      .from('users')
-      .update({ 
-        full_name: fullName,
-        role: role,
-        school: school,
-      })
-      .eq('id', userData.id);
+    // Validasi client-side cepat untuk password
+    if (newPassword && newPassword !== confirmPassword) {
+      toast.error('Password baru dan konfirmasi tidak cocok!');
+      setIsSubmitting(false);
+      return;
+    }
 
-    if (error) {
-      toast.error(`Gagal memperbarui pengguna: ${error.message}`);
+    // Buat objek FormData untuk dikirim ke Server Action
+    const formData = new FormData();
+    formData.append('full_name', fullName);
+    formData.append('role', role);
+    formData.append('school', school);
+    // Tambahkan password hanya jika diisi
+    if (newPassword) {
+      formData.append('newPassword', newPassword);
+      formData.append('confirmPassword', confirmPassword);
+    }
+    
+    // Panggil Server Action yang sudah kita buat
+    const result = await updateUserAndPotentiallyPassword(userData.id, formData);
+
+    // Tangani hasil dari Server Action
+    if (result.success) {
+      toast.success(result.message);
+      // Reset field password setelah sukses
+      setNewPassword('');
+      setConfirmPassword('');
+      router.refresh(); // Segarkan data di halaman untuk melihat perubahan
     } else {
-      toast.success('Data pengguna berhasil diperbarui!');
-      router.refresh(); // Segarkan data di halaman
+      toast.error(result.message);
     }
 
     setIsSubmitting(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Input Nama Lengkap */}
       <div>
         <label className="block font-medium">Nama Lengkap</label>
@@ -73,40 +92,71 @@ export default function EditUserForm({ userData }: { userData: UserData }) {
           className="w-full p-2 border rounded bg-gray-100" 
           readOnly 
         />
-        <p className="text-xs text-gray-500">Email tidak dapat diubah.</p>
       </div>
 
-      {/* Input Peran */}
-      <div>
-        <label className="block font-medium">Peran</label>
-        <select 
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full p-2 border rounded" 
-          required 
-          disabled={isSubmitting}
-        >
-          <option value="Admin">Admin</option>
-          <option value="Guru">Guru</option>
-          <option value="Siswa">Siswa</option>
-        </select>
-      </div>
-
-      {/* Input Sekolah */}
-      <div>
-        <label className="block font-medium">Sekolah</label>
-        <select 
-          value={school}
-          onChange={(e) => setSchool(e.target.value)}
-          className="w-full p-2 border rounded" 
-          required 
-          disabled={isSubmitting}
-        >
-          <option value="SMP BUDI BAKTI UTAMA">SMP BUDI BAKTI UTAMA</option>
-          <option value="SMK BUDI BAKTI UTAMA">SMK BUDI BAKTI UTAMA</option>
-        </select>
+      {/* Input Peran & Sekolah */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block font-medium">Peran</label>
+          <select 
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full p-2 border rounded" 
+            required 
+            disabled={isSubmitting}
+          >
+            <option value="">Pilih Peran</option>
+            <option value="Admin">Admin</option>
+            <option value="Guru">Guru</option>
+            <option value="Siswa">Siswa</option>
+          </select>
+        </div>
+        <div>
+          <label className="block font-medium">Sekolah</label>
+          <select 
+            value={school}
+            onChange={(e) => setSchool(e.target.value)}
+            className="w-full p-2 border rounded" 
+            required 
+            disabled={isSubmitting}
+          >
+            <option value="">Pilih Sekolah</option>
+            <option value="SMP BUDI BAKTI UTAMA">SMP BUDI BAKTI UTAMA</option>
+            <option value="SMK BUDI BAKTI UTAMA">SMK BUDI BAKTI UTAMA</option>
+          </select>
+        </div>
       </div>
       
+      {/* --- BAGIAN UBAH PASSWORD (BARU) --- */}
+      <div className="pt-6 border-t border-gray-200">
+        <h3 className="text-lg font-semibold leading-6 text-gray-900">Ubah Password</h3>
+        <p className="mt-1 text-sm text-gray-600">Isi hanya jika Anda ingin mengubah password pengguna ini.</p>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label className="block font-medium">Password Baru</label>
+                <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-2 border rounded" 
+                    disabled={isSubmitting}
+                    autoComplete="new-password"
+                />
+            </div>
+            <div>
+                <label className="block font-medium">Konfirmasi Password Baru</label>
+                <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full p-2 border rounded" 
+                    disabled={isSubmitting}
+                    autoComplete="new-password"
+                />
+            </div>
+        </div>
+      </div>
+
       <button 
         type="submit" 
         className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:bg-gray-400"
