@@ -61,7 +61,7 @@ export default function DashboardPage() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const dist = calculateDistance(position.coords.latitude, position.coords.longitude, schoolCoords.lat, schoolCoords.lng);
-        if (dist <= 300) { setIsWithinRadius(true); setLocationMessage({text: 'Anda berada di area sekolah.', color: 'text-green-600', icon: FaMapMarkerAlt});
+        if (dist <= 30) { setIsWithinRadius(true); setLocationMessage({text: 'Anda berada di area sekolah.', color: 'text-green-600', icon: FaMapMarkerAlt});
         } else { setIsWithinRadius(false); setLocationMessage({text: `Anda ${dist.toFixed(0)}m dari sekolah.`, color: 'text-red-600', icon: FaMapMarkerAlt}); }
       }, () => { setIsWithinRadius(false); setLocationMessage({text: 'Izin lokasi dibutuhkan.', color: 'text-yellow-600', icon: FaExclamationTriangle}); }
     );
