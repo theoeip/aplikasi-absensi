@@ -31,8 +31,7 @@ type User = {
   class_name: string | null;
 };
 
-// --- PERBAIKAN 1: Perbarui props yang diterima ---
-// Komponen ini sekarang menerima konfigurasi dan fungsi sorting dari induknya
+// Props yang diterima komponen
 interface UsersTableProps {
   users: User[];
   userRole: string;
@@ -51,7 +50,7 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
     if (error) {
       toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
-      toast.success(`Pengguna '${userName || 'tanpa nama'}' berhasil dihapus.`);
+      toast.success(`Pengguna "${userName || 'tanpa nama'}" berhasil dihapus.`);
       router.refresh();
     }
     setIsDeleting(false);
@@ -62,7 +61,6 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
       <Table>
         <TableHeader>
           <TableRow>
-            {/* --- PERBAIKAN 2: Gunakan props untuk membuat header bisa diklik --- */}
             <TableHead>
               <Button variant="ghost" onClick={requestSort} className="px-2">
                 Nama Lengkap
@@ -99,8 +97,9 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                            {/* --- PERBAIKAN: Gunakan template literal (backtick) --- */}
                             <AlertDialogDescription>
-                              Tindakan ini akan menghapus pengguna '{user.full_name || user.email}' secara permanen.
+                              {`Tindakan ini akan menghapus pengguna "${user.full_name || user.email}" secara permanen.`}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
