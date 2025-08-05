@@ -5,9 +5,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { addUser } from './actions'; // <-- LANGKAH 1: Impor Server Action yang benar
+import { addUser } from './actions';
 
-// Menggunakan komponen UI dari kode Anda
+// Komponen UI
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,16 +17,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export default function AddUserForm({ userRole }: { userRole: string }) {
   const router = useRouter();
 
-  // State untuk mengelola semua input form
+  // --- PERBAIKAN 1: Tambahkan state untuk kelas ---
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
   const [school, setSchool] = useState('');
+  const [className, setClassName] = useState(''); // State baru untuk kelas
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // useEffect untuk membuat email otomatis (sudah benar, tidak perlu diubah)
   useEffect(() => {
     const normalizeName = (name: string) => name.toLowerCase().replace(/\s+/g, '');
     const getSchoolDomain = (sch: string) => {
@@ -47,31 +47,32 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
     }
   }, [fullName, role, school, userRole]);
 
-  // --- PERUBAHAN UTAMA DI FUNGSI INI ---
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Buat objek FormData untuk dikirim ke Server Action
     const formData = new FormData();
     formData.append('full_name', fullName);
     formData.append('email', email);
     formData.append('password', password);
     formData.append('role', role);
-    // Tentukan sekolah berdasarkan peran admin
     const schoolValue = userRole === 'SuperAdmin' ? school : (userRole === 'AdminSMP' ? 'SMP BUDI BAKTI UTAMA' : 'SMK BUDI BAKTI UTAMA');
     formData.append('school', schoolValue);
 
-    // Panggil Server Action 'addUser', bukan supabase.auth.signUp()
+    // --- PERBAIKAN 2: Tambahkan data kelas ke FormData jika peran adalah Siswa ---
+    if (role === 'Siswa') {
+      formData.append('class_name', className);
+    }
+
     const result = await addUser(formData);
 
     if (result.success) {
       toast.success(result.message);
-      // Reset form fields
       setFullName('');
       setPassword('');
       setRole('');
       setSchool('');
+      setClassName(''); // Reset state kelas
       router.refresh();
     } else {
       toast.error(result.message);
@@ -86,9 +87,7 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
         <CardTitle>Tambah Pengguna Baru</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Form ini sekarang akan memanggil fungsi handleSubmit yang sudah diperbaiki */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Semua input di bawah ini tidak perlu diubah, sudah benar */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nama Lengkap</Label>
@@ -112,6 +111,8 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
               <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required disabled={isSubmitting} />
             </div>
           </div>
+          
+          {/* --- PERBAIKAN 3: Tambahkan input kelas yang muncul secara kondisional --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Peran</Label>
@@ -129,6 +130,24 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Kolom Kelas akan muncul jika peran adalah "Siswa" */}
+            {role === 'Siswa' && (
+              <div className="space-y-2">
+                <Label htmlFor="class_name">Kelas</Label>
+                <Input 
+                  id="class_name" 
+                  value={className} 
+                  onChange={(e) => setClassName(e.target.value)} 
+                  placeholder="Contoh: XII RPL 1" 
+                  required 
+                  disabled={isSubmitting} 
+                />
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1">
             <div className="space-y-2">
               <Label>Sekolah</Label>
               {userRole === 'SuperAdmin' ? (
@@ -148,6 +167,7 @@ export default function AddUserForm({ userRole }: { userRole: string }) {
               )}
             </div>
           </div>
+
           <Button type="submit" disabled={isSubmitting || !email || !password}>
             {isSubmitting ? 'Menambahkan...' : 'Tambah Pengguna'}
           </Button>

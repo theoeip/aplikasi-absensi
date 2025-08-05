@@ -26,7 +26,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Coba login dengan Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -38,29 +37,39 @@ export default function LoginPage() {
       return;
     }
 
-    // 2. Dapatkan peran asli pengguna dari database
     const actualUserRole = data.session.user.user_metadata?.role;
     const isUserActuallyAdmin = actualUserRole === 'SuperAdmin' || actualUserRole === 'AdminSMP' || actualUserRole === 'AdminSMK';
 
-    // 3. Validasi peran yang dipilih saat login
     let isValidRole = false;
     if (loginRole === 'Admin' && isUserActuallyAdmin) {
       isValidRole = true;
-    } else if (loginRole === actualUserRole && !isUserActuallyAdmin) {
+    } else if (loginRole === actualUserRole) {
       isValidRole = true;
     }
 
     if (!isValidRole) {
       toast.error(`Login gagal. Akun ini tidak diizinkan untuk login sebagai ${loginRole}.`);
-      await supabase.auth.signOut(); // Batalkan sesi yang salah
+      await supabase.auth.signOut();
       setLoading(false);
       return;
     }
     
-    // 4. PERBAIKAN: Arahkan semua pengguna ke /dashboard setelah login.
-    // Layout di /dashboard atau /admin akan menangani tampilan yang sesuai.
-    toast.success('Login berhasil!');
-    router.replace('/dashboard');
+    toast.success('Login berhasil! Mengarahkan...');
+
+    // PERBAIKAN UTAMA: Logika pengalihan yang spesifik untuk setiap peran
+    if (isUserActuallyAdmin) {
+      // Arahkan admin ke halaman laporan absensi sebagai halaman utama mereka
+      router.replace('/admin/attendance');
+    } else if (actualUserRole === 'Siswa') {
+      router.replace('/student/dashboard');
+    } else if (actualUserRole === 'Guru') {
+      router.replace('/dashboard');
+    } else {
+      // Fallback jika peran tidak dikenali
+      toast.error('Peran pengguna tidak dikenali. Logout.');
+      await supabase.auth.signOut();
+      setLoading(false);
+    }
   };
 
   const backToMain = () => {

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   
   // Konfigurasi PWA
   manifest: "/manifest.json",
-  themeColor: "#4f46e5", // Memindahkan meta theme-color ke sini
+  themeColor: "#4f46e5",
   
   // Ikon untuk perangkat Apple
   appleWebApp: {
@@ -38,7 +38,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      {/* Anda tidak perlu menulis <head> di sini, Next.js akan membuatnya secara otomatis dari objek metadata di atas */}
+      <head>
+        {/* Tambahkan baris ini untuk memuat ikon Font Awesome di seluruh aplikasi */}
+        <link 
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" 
+          rel="stylesheet" 
+        />
+      </head>
       <body className={inter.className}>
         {children}
         <Toaster richColors position="top-right" />

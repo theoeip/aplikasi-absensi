@@ -14,15 +14,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// LANGKAH 1: Perbarui Interface
+// --- PERBAIKAN 1: Perbarui Interface ---
+// Tambahkan 'role' dan 'class_name'
 interface AttendanceRecord {
   id: string;
   check_in_time: string;
-  check_out_time: string | null; // Ditambahkan
+  check_out_time: string | null;
   status: string;
   users: {
     full_name: string;
     school: string;
+    role: string;
+    class_name: string | null;
   } | null;
 }
 
@@ -32,7 +35,11 @@ function AttendanceReportComponent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  // --- PERBAIKAN 2: Tambahkan state terpisah untuk siswa dan guru ---
+  const [allAttendanceData, setAllAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [studentData, setStudentData] = useState<AttendanceRecord[]>([]);
+  const [teacherData, setTeacherData] = useState<AttendanceRecord[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [adminRole, setAdminRole] = useState<string | undefined>(undefined);
   const [filename, setFilename] = useState('Rekap_Absensi');
@@ -54,10 +61,10 @@ function AttendanceReportComponent() {
       const endDate = searchParams.get('end');
       const schoolFilter = searchParams.get('school');
 
-      // LANGKAH 2: Perbarui Query Supabase
+      // --- PERBAIKAN 3: Perbarui Query Supabase untuk mengambil 'role' dan 'class_name' ---
       let query = supabase
         .from('absensi')
-        .select(`id, check_in_time, check_out_time, status, users!inner(full_name, school)`); // check_out_time ditambahkan
+        .select(`id, check_in_time, check_out_time, status, users!inner(full_name, school, role, class_name)`);
 
       let targetSchool = '';
       if (role === 'AdminSMP') {
@@ -84,9 +91,15 @@ function AttendanceReportComponent() {
 
       if (error) {
         console.error("Gagal memuat data absensi:", error.message);
-        setAttendanceData([]);
+        setAllAttendanceData([]);
       } else {
-        setAttendanceData(data as AttendanceRecord[]);
+        const allData = data as AttendanceRecord[];
+        setAllAttendanceData(allData); // Simpan semua data untuk export
+
+        // --- PERBAIKAN 4: Pisahkan data berdasarkan peran ---
+        setStudentData(allData.filter(record => record.users?.role === 'Siswa'));
+        setTeacherData(allData.filter(record => record.users?.role === 'Guru'));
+        
         const newFilename = `Rekap_Absensi_${targetSchool || 'Semua_Sekolah'}_${startDate || 'awal'}_sd_${endDate || 'akhir'}`;
         setFilename(newFilename);
       }
@@ -108,15 +121,17 @@ function AttendanceReportComponent() {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
             <FilterControls userRole={adminRole} />
-            <ExportButton data={attendanceData} filename={filename} />
+            {/* Pastikan ExportButton menerima semua data */}
+            <ExportButton data={allAttendanceData} filename={filename} />
           </div>
           <div className="border rounded-md">
-            {/* LANGKAH 3: Perbarui Tabel JSX */}
+            {/* --- PERBAIKAN 5: Perbarui struktur tabel --- */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Pengguna</TableHead>
                   <TableHead>Sekolah</TableHead>
+                  <TableHead>Kelas</TableHead> {/* Kolom Baru */}
                   <TableHead>Waktu Masuk</TableHead>
                   <TableHead>Waktu Pulang</TableHead>
                   <TableHead>Status</TableHead>
@@ -124,36 +139,50 @@ function AttendanceReportComponent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attendanceData.length > 0 ? (
-                  attendanceData.map((absen) => (
-                    <TableRow key={absen.id}>
-                      <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
-                      <TableCell>{absen.users?.school}</TableCell>
-                      <TableCell>{formatDate(absen.check_in_time)}</TableCell>
-                      <TableCell>
-                        {absen.check_out_time ? formatDate(absen.check_out_time) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          absen.status === 'Hadir' ? 'default' :
-                          absen.status === 'Izin' ? 'secondary' :
-                          absen.status === 'Sakit' ? 'warning' : 'destructive'
-                        }>
-                          {absen.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/admin/attendance/${absen.id}/edit`}>
-                            Edit
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+                {/* Bagian Siswa */}
+                {studentData.length > 0 && (
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableCell colSpan={7} className="font-bold text-gray-700">SISWA</TableCell>
+                  </TableRow>
+                )}
+                {studentData.map((absen) => (
+                  <TableRow key={`siswa-${absen.id}`}>
+                    <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
+                    <TableCell>{absen.users?.school}</TableCell>
+                    <TableCell>{absen.users?.class_name || '-'}</TableCell>
+                    <TableCell>{formatDate(absen.check_in_time)}</TableCell>
+                    <TableCell>{absen.check_out_time ? formatDate(absen.check_out_time) : '-'}</TableCell>
+                    <TableCell><Badge variant={absen.status === 'Hadir' ? 'default' : 'destructive'}>{absen.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="outline" size="sm"><Link href={`/admin/attendance/${absen.id}/edit`}>Edit</Link></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {/* Bagian Guru */}
+                {teacherData.length > 0 && (
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableCell colSpan={7} className="font-bold text-gray-700">GURU</TableCell>
+                  </TableRow>
+                )}
+                {teacherData.map((absen) => (
+                  <TableRow key={`guru-${absen.id}`}>
+                    <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
+                    <TableCell>{absen.users?.school}</TableCell>
+                    <TableCell>-</TableCell> {/* Guru tidak punya kelas */}
+                    <TableCell>{formatDate(absen.check_in_time)}</TableCell>
+                    <TableCell>{absen.check_out_time ? formatDate(absen.check_out_time) : '-'}</TableCell>
+                    <TableCell><Badge variant={absen.status === 'Hadir' ? 'default' : 'destructive'}>{absen.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="outline" size="sm"><Link href={`/admin/attendance/${absen.id}/edit`}>Edit</Link></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {/* Pesan Jika Kosong */}
+                {allAttendanceData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center"> {/* colSpan diubah jadi 6 */}
+                    <TableCell colSpan={7} className="h-24 text-center">
                       Tidak ada data absensi yang ditemukan.
                     </TableCell>
                   </TableRow>
