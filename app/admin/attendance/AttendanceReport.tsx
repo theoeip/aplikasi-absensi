@@ -14,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// Interface dari kode Anda
+// LANGKAH 1: Perbarui Interface
 interface AttendanceRecord {
   id: string;
   check_in_time: string;
+  check_out_time: string | null; // Ditambahkan
   status: string;
   users: {
     full_name: string;
@@ -31,7 +32,6 @@ function AttendanceReportComponent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  // State untuk data, loading, dan peran pengguna
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [adminRole, setAdminRole] = useState<string | undefined>(undefined);
@@ -41,27 +41,23 @@ function AttendanceReportComponent() {
     const fetchData = async () => {
       setIsLoading(true);
 
-      // 1. Ambil sesi pengguna di sisi klien
       const { data: { session } } = await supabase.auth.getSession();
       const role = session?.user?.user_metadata?.role;
       setAdminRole(role);
 
-      // Jika tidak ada sesi/peran, jangan lanjutkan
       if (!session || !role) {
         setIsLoading(false);
         return;
       }
 
-      // 2. Ambil parameter filter dari URL
       const startDate = searchParams.get('start');
       const endDate = searchParams.get('end');
       const schoolFilter = searchParams.get('school');
 
-      // 3. Bangun query Supabase
-      // PERBAIKAN: Gunakan supabase biasa, bukan supabaseAdmin di sisi klien
+      // LANGKAH 2: Perbarui Query Supabase
       let query = supabase
         .from('absensi')
-        .select(`id, check_in_time, status, users!inner(full_name, school)`);
+        .select(`id, check_in_time, check_out_time, status, users!inner(full_name, school)`); // check_out_time ditambahkan
 
       let targetSchool = '';
       if (role === 'AdminSMP') {
@@ -84,7 +80,6 @@ function AttendanceReportComponent() {
         query = query.lt('check_in_time', nextDay.toISOString());
       }
 
-      // 4. Eksekusi query
       const { data, error } = await query.order('check_in_time', { ascending: false });
 
       if (error) {
@@ -92,7 +87,6 @@ function AttendanceReportComponent() {
         setAttendanceData([]);
       } else {
         setAttendanceData(data as AttendanceRecord[]);
-        // Buat nama file untuk ekspor
         const newFilename = `Rekap_Absensi_${targetSchool || 'Semua_Sekolah'}_${startDate || 'awal'}_sd_${endDate || 'akhir'}`;
         setFilename(newFilename);
       }
@@ -117,12 +111,14 @@ function AttendanceReportComponent() {
             <ExportButton data={attendanceData} filename={filename} />
           </div>
           <div className="border rounded-md">
+            {/* LANGKAH 3: Perbarui Tabel JSX */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Pengguna</TableHead>
                   <TableHead>Sekolah</TableHead>
-                  <TableHead>Waktu Absen</TableHead>
+                  <TableHead>Waktu Masuk</TableHead>
+                  <TableHead>Waktu Pulang</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -134,6 +130,9 @@ function AttendanceReportComponent() {
                       <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
                       <TableCell>{absen.users?.school}</TableCell>
                       <TableCell>{formatDate(absen.check_in_time)}</TableCell>
+                      <TableCell>
+                        {absen.check_out_time ? formatDate(absen.check_out_time) : '-'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={
                           absen.status === 'Hadir' ? 'default' :
@@ -154,7 +153,7 @@ function AttendanceReportComponent() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center"> {/* colSpan diubah jadi 6 */}
                       Tidak ada data absensi yang ditemukan.
                     </TableCell>
                   </TableRow>
@@ -168,8 +167,6 @@ function AttendanceReportComponent() {
   );
 }
 
-
-// Bungkus komponen utama dengan Suspense untuk menangani `useSearchParams`
 export default function AttendanceReportPageClient() {
     return (
         <Suspense fallback={<div>Loading...</div>}>
