@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 // --- PERBAIKAN 1: Perbarui Interface ---
-// Tambahkan 'role' dan 'class_name'
+// 'class_name' diubah menjadi objek 'classes'
 interface AttendanceRecord {
   id: string;
   check_in_time: string;
@@ -25,7 +25,9 @@ interface AttendanceRecord {
     full_name: string;
     school: string;
     role: string;
-    class_name: string | null;
+    classes: { // Ini adalah objek relasi, bukan teks biasa
+      name: string | null;
+    } | null;
   } | null;
 }
 
@@ -35,7 +37,6 @@ function AttendanceReportComponent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
-  // --- PERBAIKAN 2: Tambahkan state terpisah untuk siswa dan guru ---
   const [allAttendanceData, setAllAttendanceData] = useState<AttendanceRecord[]>([]);
   const [studentData, setStudentData] = useState<AttendanceRecord[]>([]);
   const [teacherData, setTeacherData] = useState<AttendanceRecord[]>([]);
@@ -61,16 +62,27 @@ function AttendanceReportComponent() {
       const endDate = searchParams.get('end');
       const schoolFilter = searchParams.get('school');
 
-      // --- PERBAIKAN 3: Perbarui Query Supabase untuk mengambil 'role' dan 'class_name' ---
+      // --- PERBAIKAN 2: Perbarui Query Supabase untuk join bertingkat ---
       let query = supabase
         .from('absensi')
-        .select(`id, check_in_time, check_out_time, status, users!inner(full_name, school, role, class_name)`);
+        .select(`
+          id, 
+          check_in_time, 
+          check_out_time, 
+          status, 
+          users!inner(
+            full_name, 
+            school, 
+            role,
+            classes(name) 
+          )
+        `);
 
       let targetSchool = '';
       if (role === 'AdminSMP') {
-        targetSchool = 'SMP BUDI BAKTI UTAMA';
+        targetSchool = 'SMP'; // Filter berdasarkan nama singkat
       } else if (role === 'AdminSMK') {
-        targetSchool = 'SMK BUDI BAKTI UTAMA';
+        targetSchool = 'SMK';
       } else if (role === 'SuperAdmin' && schoolFilter && schoolFilter !== 'semua') {
         targetSchool = schoolFilter;
       }
@@ -94,9 +106,8 @@ function AttendanceReportComponent() {
         setAllAttendanceData([]);
       } else {
         const allData = data as AttendanceRecord[];
-        setAllAttendanceData(allData); // Simpan semua data untuk export
+        setAllAttendanceData(allData);
 
-        // --- PERBAIKAN 4: Pisahkan data berdasarkan peran ---
         setStudentData(allData.filter(record => record.users?.role === 'Siswa'));
         setTeacherData(allData.filter(record => record.users?.role === 'Guru'));
         
@@ -121,17 +132,15 @@ function AttendanceReportComponent() {
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
             <FilterControls userRole={adminRole} />
-            {/* Pastikan ExportButton menerima semua data */}
             <ExportButton data={allAttendanceData} filename={filename} />
           </div>
           <div className="border rounded-md">
-            {/* --- PERBAIKAN 5: Perbarui struktur tabel --- */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama Pengguna</TableHead>
                   <TableHead>Sekolah</TableHead>
-                  <TableHead>Kelas</TableHead> {/* Kolom Baru */}
+                  <TableHead>Kelas</TableHead>
                   <TableHead>Waktu Masuk</TableHead>
                   <TableHead>Waktu Pulang</TableHead>
                   <TableHead>Status</TableHead>
@@ -149,7 +158,8 @@ function AttendanceReportComponent() {
                   <TableRow key={`siswa-${absen.id}`}>
                     <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
                     <TableCell>{absen.users?.school}</TableCell>
-                    <TableCell>{absen.users?.class_name || '-'}</TableCell>
+                    {/* --- PERBAIKAN 3: Ubah cara menampilkan nama kelas --- */}
+                    <TableCell>{absen.users?.classes?.name || '-'}</TableCell>
                     <TableCell>{formatDate(absen.check_in_time)}</TableCell>
                     <TableCell>{absen.check_out_time ? formatDate(absen.check_out_time) : '-'}</TableCell>
                     <TableCell><Badge variant={absen.status === 'Hadir' ? 'default' : 'destructive'}>{absen.status}</Badge></TableCell>
@@ -169,7 +179,7 @@ function AttendanceReportComponent() {
                   <TableRow key={`guru-${absen.id}`}>
                     <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
                     <TableCell>{absen.users?.school}</TableCell>
-                    <TableCell>-</TableCell> {/* Guru tidak punya kelas */}
+                    <TableCell>-</TableCell>
                     <TableCell>{formatDate(absen.check_in_time)}</TableCell>
                     <TableCell>{absen.check_out_time ? formatDate(absen.check_out_time) : '-'}</TableCell>
                     <TableCell><Badge variant={absen.status === 'Hadir' ? 'default' : 'destructive'}>{absen.status}</Badge></TableCell>
@@ -198,7 +208,7 @@ function AttendanceReportComponent() {
 
 export default function AttendanceReportPageClient() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Memuat Laporan...</div>}>
             <AttendanceReportComponent />
         </Suspense>
     )

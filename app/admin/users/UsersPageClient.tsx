@@ -10,14 +10,16 @@ import UsersTable from "./UsersTable";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Definisikan tipe untuk data pengguna gabungan
+// Tipe data yang telah diperbarui untuk mencerminkan relasi
 type CombinedUser = {
   id: string;
   full_name: string | null;
   email: string;
   role: string | null;
   school: string | null;
-  class_name: string | null;
+  classes: { // Diubah dari class_name menjadi classes (objek)
+    name: string | null;
+  } | null;
 };
 
 export default function UsersPageClient() {
@@ -31,12 +33,10 @@ export default function UsersPageClient() {
   const [adminRole, setAdminRole] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- PERBAIKAN 1: Pindahkan state filter dan sort ke sini ---
   const [classFilter, setClassFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: 'full_name'; direction: 'ascending' | 'descending' }>({ key: 'full_name', direction: 'ascending' });
 
   const fetchData = useCallback(async () => {
-    // Tidak perlu setIsLoading(true) di sini karena sudah ada di useEffect utama
     const { data: { session } } = await supabase.auth.getSession();
     const role = session?.user?.user_metadata?.role;
     setAdminRole(role);
@@ -46,11 +46,18 @@ export default function UsersPageClient() {
       return;
     }
 
-    let usersQuery = supabase.from('users').select('*');
+    // Query telah diperbarui untuk melakukan JOIN ke tabel classes
+    let usersQuery = supabase
+        .from('users')
+        .select(`
+            id, full_name, role, school, 
+            classes ( name )
+        `);
+    
     if (role === 'AdminSMP') {
-      usersQuery = usersQuery.eq('school', 'SMP BUDI BAKTI UTAMA');
+      usersQuery = usersQuery.eq('school', 'SMP');
     } else if (role === 'AdminSMK') {
-      usersQuery = usersQuery.eq('school', 'SMK BUDI BAKTI UTAMA');
+      usersQuery = usersQuery.eq('school', 'SMK');
     }
 
     const { data: usersData, error: usersError } = await usersQuery;
@@ -61,13 +68,14 @@ export default function UsersPageClient() {
       return;
     }
     
+    // Pemetaan data disesuaikan dengan hasil query baru
     const allUsers = usersData.map(profile => ({
       id: profile.id,
       full_name: profile.full_name,
-      email: 'N/A (Lihat di Supabase)',
+      email: 'N/A (Lihat di Auth)', // Email tidak ada di tabel public.users
       role: profile.role,
       school: profile.school,
-      class_name: profile.class_name,
+      classes: profile.classes, // Properti sekarang bernama 'classes'
     }));
 
     setStudentUsers(allUsers.filter(user => user.role === 'Siswa'));
@@ -87,31 +95,23 @@ export default function UsersPageClient() {
     const channel = supabase
       .channel('realtime users')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, 
-        () => {
-          fetchData();
-        }
+        () => { fetchData(); }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [fetchData, supabase]);
 
-  // --- PERBAIKAN 2: Logika filter dan sort dipindahkan ke sini ---
+  // Logika untuk filter dan sort disesuaikan
   const uniqueClasses = useMemo(() => {
-    return [...new Set(studentUsers.filter(u => u.class_name).map(u => u.class_name!))];
+    return [...new Set(studentUsers.filter(u => u.classes?.name).map(u => u.classes!.name!))];
   }, [studentUsers]);
 
   const sortUsers = (users: CombinedUser[]) => {
     return [...users].sort((a, b) => {
         if (!a.full_name || !b.full_name) return 0;
-        if (a.full_name.toLowerCase() < b.full_name.toLowerCase()) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a.full_name.toLowerCase() > b.full_name.toLowerCase()) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
+        if (a.full_name.toLowerCase() < b.full_name.toLowerCase()) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (a.full_name.toLowerCase() > b.full_name.toLowerCase()) return sortConfig.direction === 'ascending' ? 1 : -1;
         return 0;
     });
   };
@@ -119,7 +119,7 @@ export default function UsersPageClient() {
   const processedStudentUsers = useMemo(() => {
     const filtered = classFilter === 'all' 
       ? studentUsers 
-      : studentUsers.filter(user => user.class_name === classFilter);
+      : studentUsers.filter(user => user.classes?.name === classFilter);
     return sortUsers(filtered);
   }, [studentUsers, classFilter, sortConfig]);
 
@@ -135,17 +135,12 @@ export default function UsersPageClient() {
   if (isLoading) {
     return <div>Memuat data pengguna...</div>;
   }
-
-  if (!adminRole) {
-    return <p className="text-red-500">Tidak dapat memverifikasi peran pengguna. Silakan login kembali.</p>;
-  }
-
-  return (
+  
+  return ( 
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Manajemen Pengguna</h1>
-      <AddUserForm userRole={adminRole} />
-      
-      {/* Tabel Siswa */}
+      <AddUserForm userRole={adminRole!} />
+
       <Card>
         <CardHeader>
           <CardTitle>Daftar Siswa</CardTitle>
@@ -154,7 +149,6 @@ export default function UsersPageClient() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* --- PERBAIKAN 3: Tambahkan UI Filter di sini --- */}
           <div className="flex items-center py-4">
             <Select value={classFilter} onValueChange={setClassFilter}>
               <SelectTrigger className="w-full md:w-[240px]">
@@ -168,16 +162,15 @@ export default function UsersPageClient() {
               </SelectContent>
             </Select>
           </div>
-          <UsersTable 
-            users={processedStudentUsers} 
-            userRole={adminRole}
+          <UsersTable
+            users={processedStudentUsers}
+            userRole={adminRole!}
             sortConfig={sortConfig}
             requestSort={requestSort}
           />
         </CardContent>
       </Card>
 
-      {/* Tabel Guru */}
       <Card>
         <CardHeader>
           <CardTitle>Daftar Guru</CardTitle>
@@ -186,16 +179,15 @@ export default function UsersPageClient() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UsersTable 
-            users={processedTeacherUsers} 
-            userRole={adminRole} 
+          <UsersTable
+            users={processedTeacherUsers}
+            userRole={adminRole!}
             sortConfig={sortConfig}
             requestSort={requestSort}
           />
         </CardContent>
       </Card>
 
-      {/* Tabel Admin (hanya untuk SuperAdmin) */}
       {adminRole === 'SuperAdmin' && (
         <Card>
           <CardHeader>
@@ -205,11 +197,11 @@ export default function UsersPageClient() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <UsersTable 
-                users={processedAdminUsers} 
-                userRole={adminRole} 
-                sortConfig={sortConfig}
-                requestSort={requestSort}
+            <UsersTable
+              users={processedAdminUsers}
+              userRole={adminRole}
+              sortConfig={sortConfig}
+              requestSort={requestSort}
             />
           </CardContent>
         </Card>

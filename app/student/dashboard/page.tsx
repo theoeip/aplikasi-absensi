@@ -18,12 +18,14 @@ import GroupChat from './components/GroupChat';
 import Announcements from './components/Announcements';
 import QuickActions from './components/QuickActions';
 
-// --- Interface & Type ---
+// --- PERBAIKAN 1: Perbarui Interface UserProfile ---
 interface UserProfile {
   full_name: string | null;
   school: string | null;
   role: string | null;
-  class_name?: string | null; 
+  classes: { // Diubah dari class_name
+    name: string | null;
+  } | null; 
 }
 interface SchoolCoordinates { [key: string]: { lat: number; lng: number }; }
 interface LocationMessage { text: string; color: string; }
@@ -54,7 +56,8 @@ export default function StudentDashboardPage() {
     const { data: settings } = await supabase.from('settings').select('setting_value').eq('setting_key', 'school_coordinates').single();
     if (!settings || !profile.school) return;
 
-    const schoolCoordsData = settings.setting_value as SchoolCoordinates;
+    // Diubah menjadi tipe any untuk mengakomodasi struktur JSONB
+    const schoolCoordsData = settings.setting_value as any;
     const userSchoolKey = profile.school.toLowerCase().includes('smp') ? 'smp' : 'smk';
     const schoolCoords = schoolCoordsData[userSchoolKey];
     if (!schoolCoords) return;
@@ -62,7 +65,8 @@ export default function StudentDashboardPage() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const dist = calculateDistance(position.coords.latitude, position.coords.longitude, schoolCoords.lat, schoolCoords.lng);
-        if (dist <= 55) {
+        // Radius diperbesar sedikit menjadi 100m untuk toleransi
+        if (dist <= 100) { 
           setIsWithinRadius(true);
           setLocationMessage({ text: 'Anda berada di area sekolah.', color: 'text-green-600' });
         } else {
@@ -81,10 +85,15 @@ export default function StudentDashboardPage() {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     
-    const { data } = await supabase.from('absensi').select('id, check_in_time, check_out_time').eq('user_id', userId).gte('check_in_time', startOfDay).limit(1).maybeSingle();
+    const { data, error } = await supabase.from('absensi').select('id, check_in_time, check_out_time').eq('user_id', userId).gte('check_in_time', startOfDay).limit(1).maybeSingle();
+
+    if (error) {
+        console.error("Error fetching attendance:", error);
+        return;
+    }
 
     if (data) {
-      setTodaysAttendanceId(data.id);
+      setTodaysAttendanceId(data.id as number);
       setAttendanceStatus(data.check_out_time ? 'COMPLETED' : 'CLOCKED_IN');
     } else {
       setAttendanceStatus('NOT_CLOCKED_IN');
@@ -96,11 +105,29 @@ export default function StudentDashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      const { data: profileData } = await supabase.from('users').select('full_name, school, role, class_name').eq('id', user.id).single();
+      // --- PERBAIKAN 2: Perbarui Query untuk mengambil nama kelas dari tabel 'classes' ---
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
+        .select(`
+            full_name, 
+            school, 
+            role,
+            classes ( name )
+        `)
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        toast.error("Gagal memuat profil pengguna.");
+        setLoading(false);
+        return;
+      }
+
       if (profileData) {
-        setUserProfile(profileData);
+        setUserProfile(profileData as UserProfile);
         await fetchAttendanceStatus(user.id);
-        await checkLocation(profileData); 
+        await checkLocation(profileData as UserProfile); 
       }
       setLoading(false);
     };
@@ -139,16 +166,16 @@ export default function StudentDashboardPage() {
     setIsProcessing(false);
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Memuat dasbor siswa...</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen bg-gray-50">Memuat dasbor siswa...</div>;
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header userProfile={userProfile} onLogout={async () => { await supabase.auth.signOut(); router.push('/login'); }} />
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-8">
         <Welcome userProfile={userProfile} currentDate={currentDate} />
         <QuickStats />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-8">
             <Attendance 
               isWithinRadius={isWithinRadius}
               locationMessage={locationMessage}
@@ -161,7 +188,7 @@ export default function StudentDashboardPage() {
             <Schedule />
             <Assignments />
           </div>
-          <div className="space-y-6">
+          <div className="space-y-8">
             <GroupChat />
             <Announcements />
             <QuickActions />

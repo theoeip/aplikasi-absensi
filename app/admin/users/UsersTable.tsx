@@ -21,14 +21,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 
-// Tipe data
+// --- PERBAIKAN 1: Perbarui Tipe Data ---
 type User = {
   id: string;
   full_name: string | null;
   email: string;
   role: string | null;
   school: string | null;
-  class_name: string | null;
+  classes: { // Diubah dari class_name menjadi objek relasi
+    name: string | null;
+  } | null;
 };
 
 // Props yang diterima komponen
@@ -46,12 +48,13 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
 
   const handleDelete = async (userId: string, userName: string | null) => {
     setIsDeleting(true);
+    // Asumsi Anda punya edge function 'delete-user'
     const { error } = await supabase.functions.invoke('delete-user', { body: { user_id: userId } });
     if (error) {
       toast.error(`Gagal menghapus pengguna: ${error.message}`);
     } else {
       toast.success(`Pengguna "${userName || 'tanpa nama'}" berhasil dihapus.`);
-      router.refresh();
+      // Tidak perlu router.refresh() karena parent component (UsersPageClient) menggunakan realtime subscription
     }
     setIsDeleting(false);
   };
@@ -66,7 +69,7 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
                 Nama Lengkap
                 <FontAwesomeIcon 
                   icon={sortConfig.direction === 'ascending' ? faSortUp : faSortDown} 
-                  className="ml-2" 
+                  className="ml-2 h-4 w-4"
                 />
               </Button>
             </TableHead>
@@ -85,7 +88,8 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
                 <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>{user.school}</TableCell>
-                <TableCell>{user.role === 'Siswa' ? user.class_name || '-' : '-'}</TableCell>
+                {/* --- PERBAIKAN 2: Ubah cara menampilkan nama kelas --- */}
+                <TableCell>{user.role === 'Siswa' ? user.classes?.name || '-' : '-'}</TableCell>
                 <TableCell className="text-right space-x-2">
                   {userRole === 'SuperAdmin' && (
                     <>
@@ -97,7 +101,6 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
-                            {/* --- PERBAIKAN: Gunakan template literal (backtick) --- */}
                             <AlertDialogDescription>
                               {`Tindakan ini akan menghapus pengguna "${user.full_name || user.email}" secara permanen.`}
                             </AlertDialogDescription>

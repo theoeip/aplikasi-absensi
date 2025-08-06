@@ -3,10 +3,15 @@
 
 import React from 'react';
 
-// Terima props userProfile dan onLogout
+// --- PERBAIKAN: Lengkapi interface agar sesuai dengan data dari parent ---
 interface HeaderProps {
   userProfile: {
     full_name: string | null;
+    school: string | null;
+    role: string | null;
+    classes: {
+      name: string | null;
+    } | null;
   } | null;
   onLogout: () => void;
 }
@@ -18,7 +23,8 @@ export default function Header({ userProfile, onLogout }: HeaderProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <i className="fas fa-graduation-cap text-purple-600 text-xl"></i>
+              {/* Anda mungkin perlu menambahkan FontAwesomeIcon di sini jika belum */}
+              <span className="text-purple-600 text-xl font-bold">U</span>
             </div>
             <div>
               <h1 className="text-xl font-bold">EduPortal</h1>
@@ -27,7 +33,8 @@ export default function Header({ userProfile, onLogout }: HeaderProps) {
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <i className="fas fa-bell text-xl cursor-pointer hover:text-purple-200 transition-colors"></i>
+              {/* Ganti dengan ikon notifikasi jika Anda menggunakan library ikon */}
+              <span className="text-xl cursor-pointer hover:text-purple-200 transition-colors">🔔</span>
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-purple-600"></span>
             </div>
             <div className="flex items-center space-x-2">
@@ -36,11 +43,11 @@ export default function Header({ userProfile, onLogout }: HeaderProps) {
                 alt="Avatar" 
                 className="w-8 h-8 rounded-full" 
               />
-              {/* Tampilkan nama dari props */}
-              <span className="font-medium">{userProfile?.full_name || 'Memuat...'}</span>
+              <span className="font-medium hidden sm:block">{userProfile?.full_name || 'Memuat...'}</span>
             </div>
             <button onClick={onLogout} title="Logout" className="p-2 rounded-full hover:bg-white/20 transition-colors">
-              <i className="fas fa-sign-out-alt"></i>
+              {/* Ganti dengan ikon logout jika Anda menggunakan library ikon */}
+              <span>➡️</span>
             </button>
           </div>
         </div>
