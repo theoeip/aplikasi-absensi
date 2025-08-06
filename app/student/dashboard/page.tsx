@@ -18,15 +18,16 @@ import GroupChat from './components/GroupChat';
 import Announcements from './components/Announcements';
 import QuickActions from './components/QuickActions';
 
-// --- PERBAIKAN 1: Perbarui Interface UserProfile ---
+// Interface UserProfile sudah baik
 interface UserProfile {
   full_name: string | null;
   school: string | null;
   role: string | null;
-  classes: { // Diubah dari class_name
+  classes: {
     name: string | null;
   } | null; 
 }
+// Interface ini akan kita gunakan untuk memperbaiki error
 interface SchoolCoordinates { [key: string]: { lat: number; lng: number }; }
 interface LocationMessage { text: string; color: string; }
 type AttendanceStatus = 'NOT_CLOCKED_IN' | 'CLOCKED_IN' | 'COMPLETED';
@@ -56,8 +57,9 @@ export default function StudentDashboardPage() {
     const { data: settings } = await supabase.from('settings').select('setting_value').eq('setting_key', 'school_coordinates').single();
     if (!settings || !profile.school) return;
 
-    // Diubah menjadi tipe any untuk mengakomodasi struktur JSONB
-    const schoolCoordsData = settings.setting_value as any;
+    // --- PERBAIKAN UTAMA: Ganti 'as any' dengan tipe yang sudah didefinisikan ---
+    const schoolCoordsData = settings.setting_value as SchoolCoordinates;
+    
     const userSchoolKey = profile.school.toLowerCase().includes('smp') ? 'smp' : 'smk';
     const schoolCoords = schoolCoordsData[userSchoolKey];
     if (!schoolCoords) return;
@@ -105,7 +107,7 @@ export default function StudentDashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // --- PERBAIKAN 2: Perbarui Query untuk mengambil nama kelas dari tabel 'classes' ---
+      // Query ini sudah sangat baik
       const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select(`

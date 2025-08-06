@@ -17,7 +17,7 @@ type CombinedUser = {
   email: string;
   role: string | null;
   school: string | null;
-  classes: { // Diubah dari class_name menjadi classes (objek)
+  classes: {
     name: string | null;
   } | null;
 };
@@ -46,7 +46,6 @@ export default function UsersPageClient() {
       return;
     }
 
-    // Query telah diperbarui untuk melakukan JOIN ke tabel classes
     let usersQuery = supabase
         .from('users')
         .select(`
@@ -68,14 +67,13 @@ export default function UsersPageClient() {
       return;
     }
     
-    // Pemetaan data disesuaikan dengan hasil query baru
     const allUsers = usersData.map(profile => ({
       id: profile.id,
       full_name: profile.full_name,
-      email: 'N/A (Lihat di Auth)', // Email tidak ada di tabel public.users
+      email: 'N/A (Lihat di Auth)',
       role: profile.role,
       school: profile.school,
-      classes: profile.classes, // Properti sekarang bernama 'classes'
+      classes: profile.classes,
     }));
 
     setStudentUsers(allUsers.filter(user => user.role === 'Siswa'));
@@ -102,29 +100,31 @@ export default function UsersPageClient() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData, supabase]);
 
-  // Logika untuk filter dan sort disesuaikan
   const uniqueClasses = useMemo(() => {
     return [...new Set(studentUsers.filter(u => u.classes?.name).map(u => u.classes!.name!))];
   }, [studentUsers]);
 
-  const sortUsers = (users: CombinedUser[]) => {
+  // --- PERBAIKAN 1: Bungkus 'sortUsers' dengan useCallback ---
+  // Ini membuat fungsi sortUsers menjadi stabil dan hanya berubah jika sortConfig berubah.
+  const sortUsers = useCallback((users: CombinedUser[]) => {
     return [...users].sort((a, b) => {
         if (!a.full_name || !b.full_name) return 0;
         if (a.full_name.toLowerCase() < b.full_name.toLowerCase()) return sortConfig.direction === 'ascending' ? -1 : 1;
         if (a.full_name.toLowerCase() > b.full_name.toLowerCase()) return sortConfig.direction === 'ascending' ? 1 : -1;
         return 0;
     });
-  };
+  }, [sortConfig]); // Dependensinya adalah sortConfig
 
+  // --- PERBAIKAN 2: Tambahkan 'sortUsers' ke dependensi useMemo ---
   const processedStudentUsers = useMemo(() => {
     const filtered = classFilter === 'all' 
       ? studentUsers 
       : studentUsers.filter(user => user.classes?.name === classFilter);
     return sortUsers(filtered);
-  }, [studentUsers, classFilter, sortConfig]);
+  }, [studentUsers, classFilter, sortUsers]); // sortConfig diganti dengan sortUsers
 
-  const processedTeacherUsers = useMemo(() => sortUsers(teacherUsers), [teacherUsers, sortConfig]);
-  const processedAdminUsers = useMemo(() => sortUsers(adminUsers), [adminUsers, sortConfig]);
+  const processedTeacherUsers = useMemo(() => sortUsers(teacherUsers), [teacherUsers, sortUsers]); // sortConfig diganti dengan sortUsers
+  const processedAdminUsers = useMemo(() => sortUsers(adminUsers), [adminUsers, sortUsers]);   // sortConfig diganti dengan sortUsers
   
   const requestSort = () => {
     const direction = sortConfig.direction === 'ascending' ? 'descending' : 'ascending';
