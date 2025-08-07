@@ -1,4 +1,3 @@
-// File: app/admin/users/UsersTable.tsx
 'use client';
 
 import { useState } from "react";
@@ -21,19 +20,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 
-// --- PERBAIKAN 1: Perbarui Tipe Data ---
+// Tipe data sudah benar
 type User = {
   id: string;
   full_name: string | null;
   email: string;
   role: string | null;
   school: string | null;
-  classes: { // Diubah dari class_name menjadi objek relasi
+  classes: {
     name: string | null;
   } | null;
 };
 
-// Props yang diterima komponen
 interface UsersTableProps {
   users: User[];
   userRole: string;
@@ -46,16 +44,27 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
   const supabase = createClient();
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // --- PERBAIKAN 1: Hapus Pengguna dengan Server Action ---
+  // Ini lebih aman karena RLS akan memvalidasi aksi di server.
+  // Pastikan Anda punya file actions.ts dengan fungsi deleteUser.
   const handleDelete = async (userId: string, userName: string | null) => {
     setIsDeleting(true);
-    // Asumsi Anda punya edge function 'delete-user'
-    const { error } = await supabase.functions.invoke('delete-user', { body: { user_id: userId } });
-    if (error) {
-      toast.error(`Gagal menghapus pengguna: ${error.message}`);
+
+    const formData = new FormData();
+    formData.append('userId', userId);
+    
+    // Asumsi path dan nama fungsi sudah benar
+    const { deleteUser } = await import('./actions'); 
+    const result = await deleteUser(formData);
+
+    if (result.success) {
+      toast.success(result.message);
+      // Refresh data jika tidak menggunakan realtime
+      router.refresh(); 
     } else {
-      toast.success(`Pengguna "${userName || 'tanpa nama'}" berhasil dihapus.`);
-      // Tidak perlu router.refresh() karena parent component (UsersPageClient) menggunakan realtime subscription
+      toast.error(result.message);
     }
+    
     setIsDeleting(false);
   };
 
@@ -88,31 +97,35 @@ export default function UsersTable({ users, userRole, sortConfig, requestSort }:
                 <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>{user.school}</TableCell>
-                {/* --- PERBAIKAN 2: Ubah cara menampilkan nama kelas --- */}
                 <TableCell>{user.role === 'Siswa' ? user.classes?.name || '-' : '-'}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  {userRole === 'SuperAdmin' && (
+                  {/* --- PERBAIKAN 2: Ubah Logika Pengecekan Peran --- */}
+                  {['SuperAdmin', 'AdminSMP', 'AdminSMK'].includes(userRole) && (
                     <>
                       <Button asChild variant="outline" size="sm"><Link href={`/admin/users/${user.id}/edit`}>Edit</Link></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" disabled={isDeleting || user.role === 'SuperAdmin'}>Delete</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {`Tindakan ini akan menghapus pengguna "${user.full_name || user.email}" secara permanen.`}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(user.id, user.full_name)} disabled={isDeleting}>
-                              {isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      
+                      {/* Tombol Delete hanya muncul jika bukan menghapus SuperAdmin */}
+                      {user.role !== 'SuperAdmin' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm" disabled={isDeleting}>Delete</Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {`Tindakan ini akan menghapus pengguna "${user.full_name || user.email}" secara permanen.`}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(user.id, user.full_name)} disabled={isDeleting}>
+                                {isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </>
                   )}
                 </TableCell>

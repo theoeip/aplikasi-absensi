@@ -153,8 +153,8 @@ export default function SettingsClientPage({
                                 <SelectValue placeholder="Pilih Sekolah..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="SMP">SMP</SelectItem>
-                                <SelectItem value="SMK">SMK</SelectItem>
+                                <SelectItem value="SMP BUDI BAKTI UTAMA">SMP BUDI BAKTI UTAMA</SelectItem>
+                                <SelectItem value="SMK BUDI BAKTI UTAMA">SMK BUDI BAKTI UTAMA</SelectItem>
                             </SelectContent>
                         </Select>
                         <Button type="submit" disabled={isPending} className="sm:col-span-1">{isPending ? 'Menambah...' : 'Tambah Kelas'}</Button>
@@ -347,8 +347,8 @@ export default function SettingsClientPage({
                             <Select name="school" defaultValue={editItem.school} required>
                                 <SelectTrigger><SelectValue placeholder="Pilih sekolah..." /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="SMP">SMP</SelectItem>
-                                    <SelectItem value="SMK">SMK</SelectItem>
+                                    <SelectItem value="SMP BUDI BAKTI UTAMA">SMP BUDI BAKTI UTAMA</SelectItem>
+                                    <SelectItem value="SMK BUDI BAKTI UTAMA">SMK BUDI BAKTI UTAMA</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

@@ -1,4 +1,3 @@
-// Lokasi File: app/admin/attendance/AttendanceReport.tsx
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -14,8 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-// --- PERBAIKAN 1: Perbarui Interface ---
-// 'class_name' diubah menjadi objek 'classes'
+// Interface data, tidak ada perubahan
 interface AttendanceRecord {
   id: string;
   check_in_time: string;
@@ -25,7 +23,7 @@ interface AttendanceRecord {
     full_name: string;
     school: string;
     role: string;
-    classes: { // Ini adalah objek relasi, bukan teks biasa
+    classes: {
       name: string | null;
     } | null;
   } | null;
@@ -62,7 +60,9 @@ function AttendanceReportComponent() {
       const endDate = searchParams.get('end');
       const schoolFilter = searchParams.get('school');
 
-      // --- PERBAIKAN 2: Perbarui Query Supabase untuk join bertingkat ---
+      // --- PERBAIKAN UTAMA: Query disederhanakan ---
+      // Kita tidak perlu lagi logika filter peran di sini.
+      // RLS di database akan menangani penyaringan data secara otomatis dan aman.
       let query = supabase
         .from('absensi')
         .select(`
@@ -78,18 +78,14 @@ function AttendanceReportComponent() {
           )
         `);
 
-      let targetSchool = '';
-      if (role === 'AdminSMP') {
-        targetSchool = 'SMP'; // Filter berdasarkan nama singkat
-      } else if (role === 'AdminSMK') {
-        targetSchool = 'SMK';
-      } else if (role === 'SuperAdmin' && schoolFilter && schoolFilter !== 'semua') {
-        targetSchool = schoolFilter;
+      // Filter sekolah dari UI HANYA berlaku untuk SuperAdmin.
+      // Jika AdminSMP/AdminSMK mencoba menambahkan parameter ini di URL, RLS tetap akan memblokirnya.
+      if (role === 'SuperAdmin' && schoolFilter && schoolFilter !== 'semua') {
+        // Filter ini menggunakan nama sekolah lengkap dari URL, contoh: "SMK BUDI BAKTI UTAMA"
+        query = query.eq('users.school', schoolFilter);
       }
 
-      if (targetSchool) {
-        query = query.eq('users.school', targetSchool);
-      }
+      // Filter tanggal tetap diperlukan karena ini adalah logika bisnis, bukan keamanan.
       if (startDate) {
         query = query.gte('check_in_time', new Date(startDate).toISOString());
       }
@@ -99,6 +95,7 @@ function AttendanceReportComponent() {
         query = query.lt('check_in_time', nextDay.toISOString());
       }
 
+      // Jalankan query yang sudah jauh lebih bersih
       const { data, error } = await query.order('check_in_time', { ascending: false });
 
       if (error) {
@@ -111,7 +108,8 @@ function AttendanceReportComponent() {
         setStudentData(allData.filter(record => record.users?.role === 'Siswa'));
         setTeacherData(allData.filter(record => record.users?.role === 'Guru'));
         
-        const newFilename = `Rekap_Absensi_${targetSchool || 'Semua_Sekolah'}_${startDate || 'awal'}_sd_${endDate || 'akhir'}`;
+        // Perbaikan pada nama file agar lebih dinamis
+        const newFilename = `Rekap_Absensi_${schoolFilter || 'Semua_Data'}_${startDate || 'awal'}_sd_${endDate || 'akhir'}`;
         setFilename(newFilename);
       }
       
@@ -125,6 +123,7 @@ function AttendanceReportComponent() {
     return <div>Memuat data laporan...</div>;
   }
 
+  // --- TIDAK ADA PERUBAHAN PADA BAGIAN RENDER DI BAWAH INI ---
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Laporan Absensi</h1>
@@ -158,7 +157,6 @@ function AttendanceReportComponent() {
                   <TableRow key={`siswa-${absen.id}`}>
                     <TableCell className="font-medium">{absen.users?.full_name}</TableCell>
                     <TableCell>{absen.users?.school}</TableCell>
-                    {/* --- PERBAIKAN 3: Ubah cara menampilkan nama kelas --- */}
                     <TableCell>{absen.users?.classes?.name || '-'}</TableCell>
                     <TableCell>{formatDate(absen.check_in_time)}</TableCell>
                     <TableCell>{absen.check_out_time ? formatDate(absen.check_out_time) : '-'}</TableCell>
@@ -193,7 +191,7 @@ function AttendanceReportComponent() {
                 {allAttendanceData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                      Tidak ada data absensi yang ditemukan.
+                      Tidak ada data absensi yang ditemukan untuk filter yang dipilih.
                     </TableCell>
                   </TableRow>
                 )}

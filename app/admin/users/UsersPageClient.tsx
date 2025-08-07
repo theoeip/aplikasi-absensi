@@ -54,9 +54,9 @@ export default function UsersPageClient() {
         `);
     
     if (role === 'AdminSMP') {
-      usersQuery = usersQuery.eq('school', 'SMP');
+      usersQuery = usersQuery.eq('school', 'SMP BUDI BAKTI UTAMA');
     } else if (role === 'AdminSMK') {
-      usersQuery = usersQuery.eq('school', 'SMK');
+      usersQuery = usersQuery.eq('school', 'SMK BUDI BAKTI UTAMA');
     }
 
     const { data: usersData, error: usersError } = await usersQuery;

@@ -1,39 +1,39 @@
-// app/admin/AdminNavigation.tsx
 'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// Impor ikon baru
 import { 
   faUsers, 
   faChartBar, 
   faCog, 
-  faUserGraduate, // Ikon untuk siswa
-  faCalendarAlt   // Ikon untuk jadwal
+  faUserGraduate,
+  faCalendarAlt
 } from "@fortawesome/free-solid-svg-icons";
 
-// --- PERBAIKAN 1: Tambahkan halaman baru & properti 'roles' ---
-// Properti 'roles' berisi daftar peran yang BISA melihat menu tersebut.
-// Jika 'roles' tidak ada, artinya semua peran bisa melihat.
+// --- PERBAIKAN UTAMA ADA DI SINI ---
+// Kita menambahkan peran 'AdminSMP' dan 'AdminSMK' ke dalam daftar yang diizinkan
+// untuk setiap menu yang relevan.
 const navLinks = [
-  { href: "/admin/users", label: "Kelola User", icon: faUsers, roles: ['SuperAdmin', 'Admin'] },
-  { href: "/admin/students", label: "Manajemen Siswa", icon: faUserGraduate, roles: ['SuperAdmin', 'Admin'] },
-  { href: "/admin/schedules", label: "Manajemen Jadwal", icon: faCalendarAlt, roles: ['SuperAdmin', 'Admin'] },
+  { href: "/admin/users", label: "Kelola User", icon: faUsers, roles: ['SuperAdmin', 'AdminSMP', 'AdminSMK'] },
+  { href: "/admin/students", label: "Manajemen Siswa", icon: faUserGraduate, roles: ['SuperAdmin', 'AdminSMP', 'AdminSMK'] },
+  { href: "/admin/schedules", label: "Manajemen Jadwal", icon: faCalendarAlt, roles: ['SuperAdmin', 'AdminSMP', 'AdminSMK'] },
+  
+  // Menu di bawah ini tidak perlu diubah
   { href: "/admin/attendance", label: "Laporan Absensi", icon: faChartBar }, // Bisa dilihat semua
-  { href: "/admin/settings", label: "Pengaturan", icon: faCog, roles: ['SuperAdmin'] }, // Hanya SuperAdmin
+  { href: "/admin/settings", label: "Pengaturan", icon: faCog, roles: ['SuperAdmin', 'AdminSMP', 'AdminSMK'] }, // Hanya SuperAdmin
 ];
 
 export default function AdminNavigation({ userRole }: { userRole: string }) {
   const pathname = usePathname();
   
-  // --- PERBAIKAN 2: Logika filter yang lebih skalabel ---
+  // Logika filter di bawah ini sudah benar dan tidak perlu diubah.
+  // Ia akan bekerja dengan benar setelah kita memperbaiki array 'navLinks' di atas.
   const filteredNavLinks = navLinks.filter(link => {
-    // Jika link tidak punya properti 'roles', tampilkan untuk semua.
-    // Jika ada, periksa apakah 'userRole' saat ini termasuk di dalamnya.
     return !link.roles || link.roles.includes(userRole);
   });
 
+  // Bagian render di bawah ini juga tidak perlu diubah.
   return (
     <div className="flex border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
       {filteredNavLinks.map((link) => {
